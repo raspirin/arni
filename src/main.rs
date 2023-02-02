@@ -1,46 +1,33 @@
-use std::fs::File;
-use std::io::{BufReader, Read};
-use std::str::FromStr;
-use crate::config::{Config, init_config};
-use reqwest::blocking as request;
 use anyhow::Result;
+use arni::Context;
 use rss::Channel;
+use std::fs::File;
+use std::io::BufReader;
 
-pub mod config;
-pub mod history;
-pub mod jsonrpc;
-
-fn main() -> Result<()>{
-    // init config
+fn main() -> Result<()> {
+    // init basic context
     let default_config_path = "config.toml";
-    let config = match init_config(default_config_path) {
-        Ok(config) => config,
-        Err(_) => panic!("Fail to load/create config."),
-    };
+    let mut context = Context::new(default_config_path)?;
 
-    // channels
-    let mut channels: Vec<Channel> = vec![];
     // read web rss
-    let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
-    let rss_client = request::Client::builder().user_agent(user_agent).build()?;
-    if let Some(uris) = config.uri {
+    if let Some(uris) = context.config.uri {
         for uri in uris {
-            let response = rss_client.get(&uri).send()?;
+            let response = context.client.get(&uri).send()?;
             let content = response.bytes()?;
             let channel = Channel::read_from(&content[..])?;
-            channels.push(channel);
+            context.channels.push(channel);
         }
     }
     // read on disk rss
-    if let Some(files) = config.file {
+    if let Some(files) = context.config.file {
         for path in files {
-            let mut file = File::open(path)?;
+            let file = File::open(path)?;
             let channel = Channel::read_from(BufReader::new(file))?;
-            channels.push(channel);
+            context.channels.push(channel);
         }
     }
 
-    for channel in channels {
+    for channel in context.channels {
         for item in channel.items {
             println!("{}", item.title().unwrap());
         }

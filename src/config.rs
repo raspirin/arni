@@ -35,8 +35,8 @@ impl Config {
     }
 }
 
-pub fn init_config(config_path: &str) -> Result<Config> {
-    let on_disk = init_config_from_disk(config_path);
+pub fn load_config(config_path: &str) -> Result<Config> {
+    let on_disk = load_config_from_disk(config_path);
     if on_disk.is_err() {
         let config = Config::new();
         config.write_to_disk(config_path)?;
@@ -45,7 +45,7 @@ pub fn init_config(config_path: &str) -> Result<Config> {
     on_disk
 }
 
-fn init_config_from_disk(config_path: &str) -> Result<Config> {
+fn load_config_from_disk(config_path: &str) -> Result<Config> {
     let mut file = File::open(config_path)?;
     let mut string = String::new();
     file.read_to_string(&mut string)?;
@@ -70,17 +70,17 @@ file = []
 
     #[test]
     fn test_from_str() {
-        let s = r#"uri = ["testuri"]"#;
+        let s = r#"uri = ["test_uri"]"#;
         let config = Config::from_str(s).unwrap();
         assert_eq!(config.file, None);
-        assert_eq!(config.uri, Some(vec!["testuri".to_string()]));
+        assert_eq!(config.uri, Some(vec!["test_uri".to_string()]));
     }
 
     #[test]
     #[should_panic]
     fn test_from_invalid_str() {
         let s = r#"uri = [1]"#;
-        let config = Config::from_str(s).unwrap();
+        let _config = Config::from_str(s).unwrap();
     }
 
     #[test]
@@ -110,7 +110,7 @@ file = ["testfile"]
         let mut file = File::create(file_path)?;
         let toml = r#"uri = []"#;
         file.write_all(toml.as_bytes())?;
-        let config = init_config_from_disk(file_path)?;
+        let config = load_config_from_disk(file_path)?;
         std::fs::remove_file(file_path)?;
 
         assert_eq!(config.uri, Some(vec![]));
@@ -124,7 +124,7 @@ file = ["testfile"]
         let mut file = File::create(file_path)?;
         let toml = r#"uri = []"#;
         file.write_all(toml.as_bytes())?;
-        let config = init_config(file_path)?;
+        let config = load_config(file_path)?;
         std::fs::remove_file(file_path)?;
 
         assert_eq!(config.uri, Some(vec![]));
@@ -135,7 +135,7 @@ file = ["testfile"]
     #[test]
     fn test_init_config_from_memory() -> Result<()> {
         let path = "test_init_config_from_memory";
-        let config = init_config(path)?;
+        let config = load_config(path)?;
         assert_eq!(config.uri, Some(vec![]));
         assert_eq!(config.file, Some(vec![]));
 
