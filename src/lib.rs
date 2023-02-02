@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::BufReader;
 use crate::config::Config;
 use anyhow::Result;
 use reqwest::blocking::Client;
@@ -35,5 +37,34 @@ impl Context {
     fn new_client() -> Result<Client> {
         let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
         Ok(Client::builder().user_agent(user_agent).build()?)
+    }
+
+    pub fn prepare_channels(&mut self) -> Result<()> {
+        if let Some(uris) = &self.config.uri {
+            for uri in uris {
+                let channel = self.read_web_rss(uri)?;
+                self.channels.push(channel);
+            }
+        }
+
+        if let Some(files) = &self.config.file {
+            for file in files {
+                let channel = Self::read_on_disk_rss(file)?;
+                self.channels.push(channel);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn read_web_rss(&self, uri: &str) -> Result<Channel> {
+        let response = self.client.get(uri).send()?;
+        let content = response.bytes()?;
+        Ok(Channel::read_from(&content[..])?)
+    }
+
+    fn read_on_disk_rss(path: &str) -> Result<Channel> {
+        let file = File::open(path)?;
+        Ok(Channel::read_from(BufReader::new(file))?)
     }
 }
