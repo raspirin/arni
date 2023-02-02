@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::BufReader;
 use crate::config::Config;
-use anyhow::Result;
+use anyhow::{Result};
 use reqwest::blocking::Client;
 use rss::Channel;
 
@@ -30,13 +30,17 @@ impl Context {
     fn new_config(path: &str) -> Config {
         match config::load_config(path) {
             Ok(config) => config,
-            Err(_) => panic!("Fail to load/create config."),
+            Err(e) => panic!("Fail to load/create config. {e}"),
         }
     }
 
     fn new_client() -> Result<Client> {
         let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
-        Ok(Client::builder().user_agent(user_agent).build()?)
+        let client = match Client::builder().user_agent(user_agent).build() {
+            Ok(c) => c,
+            Err(e) => panic!("Fail to create a web client. {e}")
+        };
+        Ok(client)
     }
 
     pub fn prepare_channels(&mut self) -> Result<()> {
