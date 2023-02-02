@@ -1,9 +1,9 @@
-use std::fs::File;
-use std::io::BufReader;
 use crate::config::Config;
-use anyhow::{Result};
+use anyhow::Result;
 use reqwest::blocking::Client;
 use rss::Channel;
+use std::fs::File;
+use std::io::BufReader;
 
 pub mod config;
 pub mod history;
@@ -30,7 +30,7 @@ impl Context {
     fn new_config(path: &str) -> Config {
         match config::load_config(path) {
             Ok(config) => config,
-            Err(e) => panic!("Fail to load/create config. {e}"),
+            Err(e) => panic!("Fail to load/create config. {}", e),
         }
     }
 
@@ -38,7 +38,7 @@ impl Context {
         let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
         let client = match Client::builder().user_agent(user_agent).build() {
             Ok(c) => c,
-            Err(e) => panic!("Fail to create a web client. {e}")
+            Err(e) => panic!("Fail to create a web client. {}", e),
         };
         Ok(client)
     }
