@@ -14,7 +14,6 @@ impl History {
 
     pub fn archive(&self, path: &str) {
         let mut file = std::fs::File::create(path).unwrap();
-        let a: u64 = 0x2089b05ecca3d829;
         file.write_all(self.serialize().as_bytes()).unwrap();
     }
 }
