@@ -1,0 +1,6 @@
+{
+  "id": "arni",
+  "jsonrpc": "2.0",
+  "method": "aria2.addUri",
+  "params": [["https://mikanani.me/Download/20230123/1ee5e99047057df1b0b19bd9dfef068cb66fda64.torrent"]]
+}
