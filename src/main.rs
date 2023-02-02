@@ -1,8 +1,5 @@
 use anyhow::Result;
 use arni::Context;
-use rss::Channel;
-use std::fs::File;
-use std::io::BufReader;
 
 fn main() -> Result<()> {
     // init basic context
