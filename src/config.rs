@@ -29,7 +29,7 @@ impl Config {
 
     fn write_to_disk(&self, path: &str) -> Result<()> {
         let mut file = File::create(path)?;
-        let string = toml::to_string(self)?;
+        let string = self.to_string()?;
         file.write_all(string.as_bytes())?;
         Ok(())
     }
@@ -53,7 +53,7 @@ fn init_config_from_disk(config_path: &str) -> Result<Config> {
 }
 
 #[cfg(test)]
-mod config_tests {
+mod tests {
     use super::*;
 
     #[test]
