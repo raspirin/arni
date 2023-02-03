@@ -7,9 +7,9 @@ fn main() -> Result<()> {
     let mut context = Context::new(default_config_path)?;
     context.prepare_channels()?;
 
-    for channel in context.channels {
-        for item in channel.items {
-            println!("{}", item.title().unwrap());
+    for channel in context.channels.iter() {
+        for item in channel.items().iter() {
+            println!("{}", item.enclosure().unwrap().url())
         }
     }
 
