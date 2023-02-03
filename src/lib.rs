@@ -8,6 +8,7 @@ use std::io::BufReader;
 pub mod config;
 pub mod history;
 pub mod jsonrpc;
+pub mod error;
 
 pub struct Context {
     pub config: Config,
@@ -30,7 +31,7 @@ impl Context {
     fn new_config(path: &str) -> Config {
         match config::load_config(path) {
             Ok(config) => config,
-            Err(e) => panic!("Fail to load/create config. {}", e),
+            Err(e) => panic!("Fail to load/create config. {e}"),
         }
     }
 
@@ -38,7 +39,7 @@ impl Context {
         let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
         let client = match Client::builder().user_agent(user_agent).build() {
             Ok(c) => c,
-            Err(e) => panic!("Fail to create a web client. {}", e),
+            Err(e) => panic!("Fail to create a web client. {e}"),
         };
         Ok(client)
     }
