@@ -72,3 +72,27 @@ impl Context {
         Ok(Channel::read_from(BufReader::new(file))?)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_context() -> Result<()> {
+        let context = Context::new("empty_path")?;
+
+        assert_eq!(context.channels, vec![]);
+        assert_eq!(context.config.file, Some(vec![]));
+        assert_eq!(context.config.uri, Some(vec![]));
+        Ok(())
+    }
+
+    #[test]
+    fn test_prepare_empty_channel() -> Result<()> {
+        let mut context = Context::new("empty_path")?;
+        context.prepare_channels()?;
+
+        assert_eq!(context.channels, vec![]);
+        Ok(())
+    }
+}
