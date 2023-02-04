@@ -22,3 +22,15 @@ impl std::error::Error for Error {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "can not find torrent link")]
+    fn new_error() {
+        let error = Error::BadTorrentLink;
+        panic!("{error}")
+    }
+}
+
