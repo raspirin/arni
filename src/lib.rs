@@ -6,6 +6,7 @@ use reqwest::blocking::Client;
 use rss::Channel;
 use std::fs::File;
 use std::io::BufReader;
+use crate::history::History;
 
 pub mod config;
 pub mod error;
@@ -44,7 +45,7 @@ pub fn init_client() -> Client {
     }
 }
 
-pub fn get_channels(config: &Config, client: &Client) -> Result<Vec<Channel>> {
+fn get_channels(config: &Config, client: &Client) -> Result<Vec<Channel>> {
     let mut ret: Vec<Channel> = vec![];
 
     if let Some(uris) = &config.uri {
@@ -77,7 +78,7 @@ fn read_on_disk_rss(path: &str) -> Result<Channel> {
     Ok(Channel::read_from(BufReader::new(file))?)
 }
 
-pub fn get_episodes(channels: &Vec<Channel>) -> Result<Vec<Episode>> {
+fn get_episodes(channels: &Vec<Channel>) -> Result<Vec<Episode>> {
     let mut ret: Vec<Episode> = vec![];
     for channel in channels {
         for item in channel.items() {
@@ -104,6 +105,18 @@ fn push_episode(vec: &mut Vec<Episode>, item: &rss::Item) -> Result<()> {
     vec.push(episode);
 
     Ok(())
+}
+
+pub fn get_downloads(client: &Client, config: &Config, history: &mut History) -> Result<Vec<Episode>> {
+    let channels = get_channels(config, client)?;
+    let episodes = get_episodes(&channels)?;
+    let mut to_download: Vec<Episode> = vec![];
+    for episode in episodes.into_iter() {
+        if !history.query_downloaded(&episode.guid) {
+            to_download.push(episode)
+        }
+    }
+    Ok(to_download)
 }
 
 #[cfg(test)]

@@ -72,7 +72,7 @@ mod tests {
         let s = r#"[inner."test_guid"]
 is_downloaded = false"#;
         let history = History::from_str(s).unwrap();
-        assert_eq!(history.inner.get("test_guid").unwrap().is_downloaded, false);
+        assert!(!history.inner.get("test_guid").unwrap().is_downloaded);
         assert_eq!(history.inner.get("test_guid").unwrap().gid, None);
     }
 
@@ -100,8 +100,8 @@ is_downloaded = false
     fn test_query_download() {
         let mut history = History::new_empty();
 
-        assert_eq!(history.query_downloaded("1"), false);
-        assert_eq!(history.inner.get("1").unwrap().is_downloaded, false);
-        assert_eq!(history.query_downloaded("1"), false);
+        assert!(!history.query_downloaded("1"));
+        assert!(!history.inner.get("1").unwrap().is_downloaded);
+        assert!(!history.query_downloaded("1"));
     }
 }
