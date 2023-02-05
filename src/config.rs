@@ -147,12 +147,12 @@ uri = []"#;
     #[test]
     fn test_reload_config() -> Result<()> {
         let path = "test_reload_config";
-        let config = Config::load(path)?;
+        let mut config = Config::load(path)?;
         let toml = r#"jsonrpc_address = "addr"
 uri = ["test_uri"]"#;
         let mut file = File::create(path)?;
         file.write_all(toml.as_bytes())?;
-        let config = config.reload(path)?;
+        config.reload(path)?;
         std::fs::remove_file(path)?;
 
         assert_eq!(config.uri, Some(vec!["test_uri".to_string()]));
