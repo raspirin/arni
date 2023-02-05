@@ -6,7 +6,6 @@ use std::collections::HashMap;
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct HistoryMeta {
     pub is_downloaded: bool,
-    pub gid: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -30,7 +29,6 @@ impl History {
                     guid,
                     HistoryMeta {
                         is_downloaded: false,
-                        gid: None,
                     },
                 );
                 false
@@ -77,7 +75,6 @@ mod tests {
 is_downloaded = false"#;
         let history = History::from_str(s).unwrap();
         assert!(!history.inner.get("test_guid").unwrap().is_downloaded);
-        assert_eq!(history.inner.get("test_guid").unwrap().gid, None);
     }
 
     #[test]
@@ -95,7 +92,6 @@ is_download = 1"#;
             String::from("test guid 1"),
             HistoryMeta {
                 is_downloaded: false,
-                gid: None,
             },
         );
         let toml = r#"[inner."test guid 1"]

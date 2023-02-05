@@ -14,10 +14,19 @@ pub mod history;
 pub mod jsonrpc;
 pub mod persist;
 
+pub enum DownloadStatus {
+    Waiting,
+    Sent,
+    Done,
+    Error,
+}
+
 pub struct Episode {
     pub guid: String,
     pub title: Option<String>,
     pub torrent_link: String,
+    pub gid: Option<String>,
+    pub download_status: DownloadStatus,
 }
 
 impl Episode {
@@ -26,6 +35,8 @@ impl Episode {
             guid,
             title,
             torrent_link,
+            gid: None,
+            download_status: DownloadStatus::Waiting,
         }
     }
 }
