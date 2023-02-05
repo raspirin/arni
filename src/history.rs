@@ -87,7 +87,13 @@ is_download = 1"#;
     #[test]
     fn test_history_to_string() {
         let mut history = History::new();
-        history.inner.insert(String::from("test guid 1"), HistoryMeta { is_downloaded: false, gid: None});
+        history.inner.insert(
+            String::from("test guid 1"),
+            HistoryMeta {
+                is_downloaded: false,
+                gid: None,
+            },
+        );
         let toml = r#"[inner."test guid 1"]
 is_downloaded = false
 "#;

@@ -1,12 +1,12 @@
 use crate::config::Config;
 use crate::error::Error;
+use crate::history::History;
 use crate::persist::Persist;
 use anyhow::Result;
 use reqwest::blocking::Client;
 use rss::Channel;
 use std::fs::File;
 use std::io::BufReader;
-use crate::history::History;
 
 pub mod config;
 pub mod error;
@@ -37,8 +37,7 @@ pub fn init_config(config_path: &str) -> Config {
     }
 }
 
-pub fn init_client() -> Client {
-    let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+pub fn init_client(user_agent: &str) -> Client {
     match Client::builder().user_agent(user_agent).build() {
         Ok(c) => c,
         Err(e) => panic!("Fail to create a web client. {e}"),
@@ -107,7 +106,11 @@ fn push_episode(vec: &mut Vec<Episode>, item: &rss::Item) -> Result<()> {
     Ok(())
 }
 
-pub fn get_downloads(client: &Client, config: &Config, history: &mut History) -> Result<Vec<Episode>> {
+pub fn get_downloads(
+    client: &Client,
+    config: &Config,
+    history: &mut History,
+) -> Result<Vec<Episode>> {
     let channels = get_channels(config, client)?;
     let episodes = get_episodes(&channels)?;
     let mut to_download: Vec<Episode> = vec![];
