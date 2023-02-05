@@ -40,4 +40,11 @@ pub trait Persist {
         }
         on_disk
     }
+
+    fn reload(self, path: &str) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        Self::load(path)
+    }
 }
