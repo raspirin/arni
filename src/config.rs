@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
+    pub jsonrpc_address: String,
     pub uri: Option<Vec<String>>,
     pub file: Option<Vec<String>>,
 }
@@ -11,6 +12,7 @@ pub struct Config {
 impl Config {
     fn new() -> Self {
         Self {
+            jsonrpc_address: String::new(),
             uri: Some(vec![]),
             file: Some(vec![]),
         }
@@ -42,10 +44,12 @@ mod tests {
     #[test]
     fn test_new_config() {
         let config = Config::new();
+        assert_eq!(config.jsonrpc_address, String::new());
         assert_eq!(config.uri, Some(vec![]));
         assert_eq!(config.file, Some(vec![]));
         let str = config.to_string().unwrap();
-        let r = r#"uri = []
+        let r = r#"jsonrpc_address = ""
+uri = []
 file = []
 "#;
         assert_eq!(str, r);
@@ -53,8 +57,10 @@ file = []
 
     #[test]
     fn test_config_from_str() {
-        let s = r#"uri = ["test_uri"]"#;
+        let s = r#"jsonrpc_address = "addr"
+uri = ["test_uri"]"#;
         let config = Config::from_str(s).unwrap();
+        assert_eq!(config.jsonrpc_address, "addr".to_string());
         assert_eq!(config.file, None);
         assert_eq!(config.uri, Some(vec!["test_uri".to_string()]));
     }
@@ -69,11 +75,13 @@ file = []
     #[test]
     fn test_config_to_string() {
         let c = Config {
+            jsonrpc_address: String::new(),
             file: Some(vec!["testfile".to_string()]),
             uri: Some(vec![]),
         };
         let s = c.to_string().unwrap();
-        let r = r#"uri = []
+        let r = r#"jsonrpc_address = ""
+uri = []
 file = ["testfile"]
 "#;
         assert_eq!(s, r);
@@ -89,15 +97,17 @@ file = ["testfile"]
 
     #[test]
     fn test_load_disk_config() -> Result<()> {
-        let file_path = "test_load_disk_config_config.toml";
+        let file_path = "test_load_disk_config.toml";
         let mut file = File::create(file_path)?;
-        let toml = r#"uri = []"#;
+        let toml = r#"jsonrpc_address = "addr"
+uri = []"#;
         file.write_all(toml.as_bytes())?;
         let config = Config::load_from_disk(file_path)?;
         std::fs::remove_file(file_path)?;
 
         assert_eq!(config.uri, Some(vec![]));
         assert_eq!(config.file, None);
+        assert_eq!(config.jsonrpc_address, "addr".to_string());
         Ok(())
     }
 
@@ -105,11 +115,13 @@ file = ["testfile"]
     fn test_init_config_on_disk() -> Result<()> {
         let file_path = "test_init_config_on_disk";
         let mut file = File::create(file_path)?;
-        let toml = r#"uri = []"#;
+        let toml = r#"jsonrpc_address = "addr"
+uri = []"#;
         file.write_all(toml.as_bytes())?;
         let config = Config::load(file_path)?;
         std::fs::remove_file(file_path)?;
 
+        assert_eq!(config.jsonrpc_address, "addr".to_string());
         assert_eq!(config.uri, Some(vec![]));
         assert_eq!(config.file, None);
         Ok(())
@@ -136,13 +148,15 @@ file = ["testfile"]
     fn test_reload_config() -> Result<()> {
         let path = "test_reload_config";
         let config = Config::load(path)?;
-        let toml = r#"uri = ["test_uri"]"#;
+        let toml = r#"jsonrpc_address = "addr"
+uri = ["test_uri"]"#;
         let mut file = File::create(path)?;
         file.write_all(toml.as_bytes())?;
         let config = config.reload(path)?;
         std::fs::remove_file(path)?;
 
         assert_eq!(config.uri, Some(vec!["test_uri".to_string()]));
+        assert_eq!(config.jsonrpc_address, "addr".to_string());
         Ok(())
     }
 }
