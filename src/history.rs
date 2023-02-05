@@ -3,7 +3,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct HistoryMeta {
     pub is_downloaded: bool,
     pub gid: Option<u64>,
@@ -52,5 +52,56 @@ impl Persist for History {
     fn to_string(&self) -> Result<String> {
         let ret = toml::to_string(&self)?;
         Ok(ret)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_empty_history() {
+        let history = History::new_empty();
+        let inner = &history.inner;
+
+        assert_eq!(inner, &HashMap::new());
+    }
+
+    #[test]
+    fn test_history_from_str() {
+        let s = r#"[inner."test_guid"]
+is_downloaded = false"#;
+        let history = History::from_str(s).unwrap();
+        assert_eq!(history.inner.get("test_guid").unwrap().is_downloaded, false);
+        assert_eq!(history.inner.get("test_guid").unwrap().gid, None);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_history_invalid_str() {
+        let s = r#"[inner."test_guid"]
+is_download = 1"#;
+        let _ = History::from_str(s).unwrap();
+    }
+
+    #[test]
+    fn test_history_to_string() {
+        let mut history = History::new();
+        history.inner.insert(String::from("test guid 1"), HistoryMeta { is_downloaded: false, gid: None});
+        let toml = r#"[inner."test guid 1"]
+is_downloaded = false
+"#;
+        let s = history.to_string().unwrap();
+
+        assert_eq!(toml, s);
+    }
+
+    #[test]
+    fn test_query_download() {
+        let mut history = History::new_empty();
+
+        assert_eq!(history.query_downloaded("1"), false);
+        assert_eq!(history.inner.get("1").unwrap().is_downloaded, false);
+        assert_eq!(history.query_downloaded("1"), false);
     }
 }
