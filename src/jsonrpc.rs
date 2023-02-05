@@ -46,6 +46,7 @@ impl std::error::Error for JsonRPCError {
 enum JsonRPCMethod {
     Aria2AddUri,
     Aria2GetVersion,
+    Aria2TellStatus,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -95,6 +96,7 @@ impl JsonRPC {
             match method.as_str() {
                 "aria2.addUri" => JsonRPCMethod::Aria2AddUri,
                 "aria2.getVersion" => JsonRPCMethod::Aria2GetVersion,
+                "aria2.tellStatus" => JsonRPCMethod::Aria2TellStatus,
                 _ => panic!("unreachable match arm for json rpc method"),
             }
         } else {
@@ -136,9 +138,7 @@ impl JsonRPCBuilder {
         let method = "aria2.addUri".to_string();
         let secret = Self::parse_token(secret);
         let params = json!([secret, vec![uri]]);
-        self.inner.method = Some(method);
-        self.inner.params = Some(params);
-        self.available = true;
+        self.complete_method(method, params);
         self
     }
 
@@ -146,10 +146,22 @@ impl JsonRPCBuilder {
         let method = "aria2.getVersion".to_string();
         let secret = Self::parse_token(secret);
         let params = json!([secret]);
+        self.complete_method(method, params);
+        self
+    }
+
+    pub fn aria2_tell_status(mut self, secret: Option<String>, gid: String) -> Self {
+        let method = "aria2.tellStatus".to_string();
+        let secret = Self::parse_token(secret);
+        let params = json!([secret, gid, ["status"]]);
+        self.complete_method(method, params);
+        self
+    }
+
+    fn complete_method(&mut self, method: String, params: serde_json::Value) {
         self.inner.method = Some(method);
         self.inner.params = Some(params);
         self.available = true;
-        self
     }
 }
 
@@ -188,9 +200,21 @@ impl JsonRPCResponse {
                     let ret = HashMap::from([(key, value)]);
                     Ok(ret)
                 }
+                JsonRPCMethod::Aria2TellStatus => {
+                    let key = "status".to_string();
+                    let unsafe_string = v.get("status").unwrap().to_string();
+                    let value = Self::trim_matches(unsafe_string, '"');
+                    println!("{value}");
+                    let ret = HashMap::from([(key, String::new())]);
+                    Ok(ret)
+                }
             };
         }
 
         Err(anyhow::Error::from(JsonRPCError::NotStandardResponse))
+    }
+
+    fn trim_matches(str: String, pat: char) -> String {
+        str.trim_matches(pat).to_string()
     }
 }
