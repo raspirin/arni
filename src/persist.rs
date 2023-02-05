@@ -41,10 +41,13 @@ pub trait Persist {
         on_disk
     }
 
-    fn reload(self, path: &str) -> Result<Self>
+    fn reload(&mut self, path: &str) -> Result<()>
     where
         Self: Sized,
     {
-        Self::load(path)
+        let new = Self::load(path)?;
+        *self = new;
+
+        Ok(())
     }
 }
