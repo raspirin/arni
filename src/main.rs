@@ -1,12 +1,12 @@
 use anyhow::Result;
-use reqwest::blocking::Client;
+use arni::config::Config;
 use arni::error::Error;
 use arni::history::History;
 use arni::jsonrpc::JsonRPCBuilder;
 use arni::persist::Persist;
-use arni::{Episode, get_downloads, init_client, init_config};
+use arni::{get_downloads, init_client, init_config, Episode};
+use reqwest::blocking::Client;
 use serde_json::Value;
-use arni::config::Config;
 
 fn main() -> Result<()> {
     // init basic context
@@ -23,7 +23,13 @@ fn main() -> Result<()> {
 
     let to_download = get_downloads(&client, &config, &mut history)?;
 
-    send_to_aria2(default_user_agent_name, &client, &config, &mut history, &to_download)?;
+    send_to_aria2(
+        default_user_agent_name,
+        &client,
+        &config,
+        &mut history,
+        &to_download,
+    )?;
 
     config.write_to_disk(default_config_path)?;
     history.write_to_disk(default_history_path)?;
@@ -31,15 +37,21 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn send_to_aria2(default_user_agent_name: &str, client: &Client, config: &Config, history: &mut History, to_download: &Vec<Episode>) -> Result<()> {
+fn send_to_aria2(
+    default_user_agent_name: &str,
+    client: &Client,
+    config: &Config,
+    history: &mut History,
+    to_download: &Vec<Episode>,
+) -> Result<()> {
     let addr = &config.jsonrpc_address;
     for episode in to_download {
         let response = JsonRPCBuilder::new(default_user_agent_name)
-            .aria2_add_uri(None, &episode.torrent_link, None, None)
+            .aria2_add_uri(None, &episode.torrent_link)
             .build()?
             .send(client, addr)?
             .unwrap_response()?;
-        let gid: u64 = response.get("gid").unwrap().parse()?;
+        let gid = response.get("gid").unwrap().clone();
         let metadata = history.get_metadata_mut(&episode.guid);
         metadata.gid = Some(gid);
     }
