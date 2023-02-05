@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct HistoryMeta {
+    #[serde(rename = "downloaded")]
     pub is_downloaded: bool,
 }
 
@@ -72,7 +73,7 @@ mod tests {
     #[test]
     fn test_history_from_str() {
         let s = r#"[inner."test_guid"]
-is_downloaded = false"#;
+downloaded = false"#;
         let history = History::from_str(s).unwrap();
         assert!(!history.inner.get("test_guid").unwrap().is_downloaded);
     }
@@ -95,7 +96,7 @@ is_download = 1"#;
             },
         );
         let toml = r#"[inner."test guid 1"]
-is_downloaded = false
+downloaded = false
 "#;
         let s = history.to_string().unwrap();
 
