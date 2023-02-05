@@ -1,7 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::{Read, Write};
+use crate::persist::Persist;
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
@@ -16,6 +15,12 @@ impl Config {
             file: Some(vec![]),
         }
     }
+}
+
+impl Persist for Config {
+    fn new_empty() -> Self {
+        Config::new()
+    }
 
     fn from_str(s: &str) -> Result<Self> {
         let ret: Config = toml::from_str(s)?;
@@ -26,34 +31,12 @@ impl Config {
         let ret = toml::to_string(&self)?;
         Ok(ret)
     }
-
-    fn write_to_disk(&self, path: &str) -> Result<()> {
-        let mut file = File::create(path)?;
-        let string = self.to_string()?;
-        file.write_all(string.as_bytes())?;
-        Ok(())
-    }
-}
-
-pub fn load_config(config_path: &str) -> Result<Config> {
-    let on_disk = load_config_from_disk(config_path);
-    if on_disk.is_err() {
-        let config = Config::new();
-        config.write_to_disk(config_path)?;
-        return Ok(config);
-    }
-    on_disk
-}
-
-fn load_config_from_disk(config_path: &str) -> Result<Config> {
-    let mut file = File::open(config_path)?;
-    let mut string = String::new();
-    file.read_to_string(&mut string)?;
-    Config::from_str(&string)
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+    use std::io::{Read, Write};
     use super::*;
 
     #[test]
@@ -110,7 +93,7 @@ file = ["testfile"]
         let mut file = File::create(file_path)?;
         let toml = r#"uri = []"#;
         file.write_all(toml.as_bytes())?;
-        let config = load_config_from_disk(file_path)?;
+        let config = Config::load_from_disk(file_path)?;
         std::fs::remove_file(file_path)?;
 
         assert_eq!(config.uri, Some(vec![]));
@@ -124,7 +107,7 @@ file = ["testfile"]
         let mut file = File::create(file_path)?;
         let toml = r#"uri = []"#;
         file.write_all(toml.as_bytes())?;
-        let config = load_config(file_path)?;
+        let config = Config::load(file_path)?;
         std::fs::remove_file(file_path)?;
 
         assert_eq!(config.uri, Some(vec![]));
@@ -135,7 +118,7 @@ file = ["testfile"]
     #[test]
     fn test_init_config_from_memory() -> Result<()> {
         let path = "test_init_config_from_memory";
-        let config = load_config(path)?;
+        let config = Config::load(path)?;
         assert_eq!(config.uri, Some(vec![]));
         assert_eq!(config.file, Some(vec![]));
 

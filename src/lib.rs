@@ -5,11 +5,13 @@ use rss::Channel;
 use std::fs::File;
 use std::io::BufReader;
 use crate::error::Error;
+use crate::persist::Persist;
 
 pub mod config;
 pub mod history;
 pub mod jsonrpc;
 pub mod error;
+pub mod persist;
 
 pub struct Episode {
     pub guid: String,
@@ -28,7 +30,7 @@ impl Episode {
 }
 
 pub fn init_config(config_path: &str) -> Config {
-    match config::load_config(config_path) {
+    match Config::load(config_path) {
         Ok(config) => config,
         Err(e) => panic!("Fail to load/create config. {e}"),
     }
