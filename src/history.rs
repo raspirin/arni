@@ -37,6 +37,10 @@ impl History {
             }
         }
     }
+
+    pub fn get_metadata_mut(&mut self, guid: &str) -> &mut HistoryMeta {
+        self.inner.get_mut(guid).unwrap()
+    }
 }
 
 impl Persist for History {
