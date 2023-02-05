@@ -6,7 +6,7 @@ use std::collections::HashMap;
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct HistoryMeta {
     pub is_downloaded: bool,
-    pub gid: Option<u64>,
+    pub gid: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

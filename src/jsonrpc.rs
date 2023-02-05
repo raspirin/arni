@@ -125,16 +125,17 @@ impl JsonRPCBuilder {
         Ok(self.inner)
     }
 
-    pub fn aria2_add_uri(
-        mut self,
-        secret: Option<String>,
-        uri: &str,
-        option: Option<Options>,
-        position: Option<u32>,
-    ) -> Self {
+    fn parse_token(secret: Option<String>) -> String {
+        match secret {
+            Some(s) => format!("token:{s}"),
+            None => "token:".to_string(),
+        }
+    }
+
+    pub fn aria2_add_uri(mut self, secret: Option<String>, uri: &str) -> Self {
         let method = "aria2.addUri".to_string();
-        let params = json!([secret, vec![uri], option, position]);
-        // println!("{}", params.to_string());
+        let secret = Self::parse_token(secret);
+        let params = json!([secret, vec![uri]]);
         self.inner.method = Some(method);
         self.inner.params = Some(params);
         self.available = true;
@@ -143,6 +144,7 @@ impl JsonRPCBuilder {
 
     pub fn aria2_get_version(mut self, secret: Option<String>) -> Self {
         let method = "aria2.getVersion".to_string();
+        let secret = Self::parse_token(secret);
         let params = json!([secret]);
         self.inner.method = Some(method);
         self.inner.params = Some(params);
@@ -182,7 +184,7 @@ impl JsonRPCResponse {
                 }
                 JsonRPCMethod::Aria2AddUri => {
                     let key = "gid".to_string();
-                    let value = v.to_string();
+                    let value = v.as_str().unwrap().to_string();
                     let ret = HashMap::from([(key, value)]);
                     Ok(ret)
                 }
