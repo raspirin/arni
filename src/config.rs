@@ -52,7 +52,7 @@ file = []
     }
 
     #[test]
-    fn test_from_str() {
+    fn test_config_from_str() {
         let s = r#"uri = ["test_uri"]"#;
         let config = Config::from_str(s).unwrap();
         assert_eq!(config.file, None);
@@ -61,13 +61,13 @@ file = []
 
     #[test]
     #[should_panic]
-    fn test_from_invalid_str() {
+    fn test_config_from_invalid_str() {
         let s = r#"uri = [1]"#;
         let _config = Config::from_str(s).unwrap();
     }
 
     #[test]
-    fn test_to_string() {
+    fn test_config_to_string() {
         let c = Config {
             file: Some(vec!["testfile".to_string()]),
             uri: Some(vec![]),
