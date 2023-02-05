@@ -150,9 +150,10 @@ impl JsonRPCBuilder {
         self
     }
 
-    pub fn aria2_tell_status(mut self, secret: Option<String>, gid: String) -> Self {
+    pub fn aria2_tell_status(mut self, secret: Option<String>, gid: &str) -> Self {
         let method = "aria2.tellStatus".to_string();
         let secret = Self::parse_token(secret);
+        let gid = gid.to_string();
         let params = json!([secret, gid, ["status"]]);
         self.complete_method(method, params);
         self
@@ -204,8 +205,7 @@ impl JsonRPCResponse {
                     let key = "status".to_string();
                     let unsafe_string = v.get("status").unwrap().to_string();
                     let value = Self::trim_matches(unsafe_string, '"');
-                    println!("{value}");
-                    let ret = HashMap::from([(key, String::new())]);
+                    let ret = HashMap::from([(key, value)]);
                     Ok(ret)
                 }
             };
