@@ -1,10 +1,10 @@
+use anyhow::Result;
+use arni::persist::Persist;
+use arni::{error::Error, get_channels, get_episodes, init_client, init_config};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
-use arni::{error::Error, get_channels, get_episodes, init_client, init_config};
-use arni::persist::Persist;
 
 fn main() -> Result<()> {
     // init basic context
@@ -19,7 +19,6 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-
 #[derive(Serialize, Deserialize)]
 struct History {
     inner: Option<HashMap<String, (bool, u64)>>,
@@ -31,8 +30,6 @@ impl History {
             inner: Some(HashMap::new()),
         }
     }
-
-
 }
 
 impl Persist for History {

@@ -1,6 +1,6 @@
+use crate::persist::Persist;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use crate::persist::Persist;
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
@@ -35,9 +35,9 @@ impl Persist for Config {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::fs::File;
     use std::io::{Read, Write};
-    use super::*;
 
     #[test]
     fn test_new_config() {
