@@ -1,9 +1,10 @@
+use std::time;
 use anyhow::Result;
 use arni::config::Config;
 use arni::history::History;
 use arni::jsonrpc::JsonRPCBuilder;
 use arni::persist::Persist;
-use arni::{get_downloads, init_client, init_config, Episode, DownloadStatus};
+use arni::{get_downloads, init_client, init_config, DownloadStatus, Episode};
 use reqwest::blocking::Client;
 
 fn main() -> Result<()> {
@@ -11,43 +12,72 @@ fn main() -> Result<()> {
     let default_config_path = "config.toml";
     let default_history_path = "history.toml";
     let default_user_agent_name = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
-    let config = init_config(default_config_path);
-    let history = History::load(default_history_path)?;
+    let mut config = init_config(default_config_path);
+    let mut history = History::load(default_history_path)?;
     let client = init_client(default_user_agent_name);
+    let mut download_list;
 
-    // basic loop
-    let config = config.reload(default_config_path)?;
-    let mut history = history.reload(default_history_path)?;
+    loop {
+        // basic loop
+        config.reload(default_config_path)?;
+        history.reload(default_history_path)?;
+        download_list = get_downloads(&client, &config, &mut history)?;
 
-    let mut download_list = get_downloads(&client, &config, &mut history)?;
+        send_to_aria2(
+            default_user_agent_name,
+            &client,
+            &config,
+            &mut download_list,
+        )?;
 
-    send_to_aria2(
-        default_user_agent_name,
-        &client,
-        &config,
-        &mut download_list,
-    )?;
+        sync_download_status(
+            default_user_agent_name,
+            &client,
+            &config,
+            &mut history,
+            &mut download_list,
+        )?;
 
+        download_list.retain(|episode| !matches!(&episode.download_status, DownloadStatus::Done | DownloadStatus::Error));
+        for download in download_list.iter() {
+            println!("{}", &download.guid);
+        }
+
+        config.write_to_disk(default_config_path)?;
+        history.write_to_disk(default_history_path)?;
+
+        let duration = time::Duration::from_secs(5);
+        std::thread::sleep(duration);
+    }
+}
+
+fn sync_download_status(
+    default_user_agent_name: &str,
+    client: &Client,
+    config: &Config,
+    history: &mut History,
+    download_list: &mut [Episode],
+) -> Result<()> {
     let addr = &config.jsonrpc_address;
     for episode in download_list.iter_mut() {
         let response = JsonRPCBuilder::new(default_user_agent_name)
             .aria2_tell_status(None, &episode.gid.clone().unwrap())
             .build()?
-            .send(&client, addr)?
+            .send(client, addr)?
             .unwrap_response()?;
         let status = response.get("status").unwrap().as_str();
-        episode.download_status =  match status {
+        episode.download_status = match status {
             "active" | "waiting" | "paused" => DownloadStatus::Sent,
             "error" => DownloadStatus::Error,
             "complete" | "removed" => DownloadStatus::Done,
-            _ => panic!("impossible download status")
+            _ => panic!("impossible download status"),
         };
 
-        history.get_metadata_mut(&episode.guid).is_downloaded = matches!(&episode.download_status, DownloadStatus::Done | DownloadStatus::Error);
+        history.get_metadata_mut(&episode.guid).is_downloaded = matches!(
+            &episode.download_status,
+            DownloadStatus::Done | DownloadStatus::Error
+        );
     }
-
-    config.write_to_disk(default_config_path)?;
-    history.write_to_disk(default_history_path)?;
 
     Ok(())
 }
