@@ -1,16 +1,16 @@
 use crate::config::Config;
+use crate::error::Error;
+use crate::persist::Persist;
 use anyhow::Result;
 use reqwest::blocking::Client;
 use rss::Channel;
 use std::fs::File;
 use std::io::BufReader;
-use crate::error::Error;
-use crate::persist::Persist;
 
 pub mod config;
+pub mod error;
 pub mod history;
 pub mod jsonrpc;
-pub mod error;
 pub mod persist;
 
 pub struct Episode {
@@ -109,5 +109,4 @@ fn push_episode(vec: &mut Vec<Episode>, item: &rss::Item) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 }

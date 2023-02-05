@@ -1,11 +1,13 @@
+use anyhow::Result;
 use std::fs::File;
 use std::io::{Read, Write};
-use anyhow::Result;
 
 pub trait Persist {
     fn new_empty() -> Self;
 
-    fn from_str(s: &str) -> Result<Self> where Self: Sized;
+    fn from_str(s: &str) -> Result<Self>
+    where
+        Self: Sized;
 
     fn to_string(&self) -> Result<String>;
 
@@ -16,14 +18,20 @@ pub trait Persist {
         Ok(())
     }
 
-    fn load_from_disk(path: &str) -> Result<Self> where Self: Sized {
+    fn load_from_disk(path: &str) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let mut file = File::open(path)?;
         let mut string = String::new();
         file.read_to_string(&mut string)?;
         Self::from_str(&string)
     }
 
-    fn load(path: &str) -> Result<Self> where Self: Sized {
+    fn load(path: &str) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let on_disk = Self::load_from_disk(path);
         if on_disk.is_err() {
             let slf = Self::new_empty();
