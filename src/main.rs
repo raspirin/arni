@@ -1,4 +1,3 @@
-use std::time;
 use anyhow::Result;
 use arni::config::Config;
 use arni::history::History;
@@ -6,6 +5,7 @@ use arni::jsonrpc::JsonRPCBuilder;
 use arni::persist::Persist;
 use arni::{get_downloads, init_client, init_config, DownloadStatus, Episode};
 use reqwest::blocking::Client;
+use std::time;
 
 fn main() -> Result<()> {
     // init basic context
@@ -15,13 +15,14 @@ fn main() -> Result<()> {
     let mut config = init_config(default_config_path);
     let mut history = History::load(default_history_path)?;
     let client = init_client(default_user_agent_name);
-    let mut download_list;
+    let mut download_list: Vec<Episode> = vec![];
 
     loop {
         // basic loop
         config.reload(default_config_path)?;
         history.reload(default_history_path)?;
-        download_list = get_downloads(&client, &config, &mut history)?;
+
+        merge_download_list(&mut config, &mut history, &client, &mut download_list)?;
 
         send_to_aria2(
             default_user_agent_name,
@@ -38,10 +39,12 @@ fn main() -> Result<()> {
             &mut download_list,
         )?;
 
-        download_list.retain(|episode| !matches!(&episode.download_status, DownloadStatus::Done | DownloadStatus::Error));
-        for download in download_list.iter() {
-            println!("{}", &download.guid);
-        }
+        download_list.retain(|episode| {
+            !matches!(
+                &episode.download_status,
+                DownloadStatus::Done | DownloadStatus::Error
+            )
+        });
 
         config.write_to_disk(default_config_path)?;
         history.write_to_disk(default_history_path)?;
@@ -49,6 +52,28 @@ fn main() -> Result<()> {
         let duration = time::Duration::from_secs(5);
         std::thread::sleep(duration);
     }
+}
+
+fn merge_download_list(
+    config: &mut Config,
+    history: &mut History,
+    client: &Client,
+    download_list: &mut Vec<Episode>,
+) -> Result<()> {
+    let to_merge = get_downloads(client, config, history)?;
+    for episode in to_merge.into_iter() {
+        let mut unique = true;
+        for download in download_list.iter() {
+            if download.guid == episode.guid {
+                unique = false;
+            }
+        }
+        if unique {
+            download_list.push(episode);
+        }
+    }
+
+    Ok(())
 }
 
 fn sync_download_status(
@@ -90,14 +115,16 @@ fn send_to_aria2(
 ) -> Result<()> {
     let addr = &config.jsonrpc_address;
     for mut episode in download_list {
-        let response = JsonRPCBuilder::new(default_user_agent_name)
-            .aria2_add_uri(None, &episode.torrent_link)
-            .build()?
-            .send(client, addr)?
-            .unwrap_response()?;
-        let gid = response.get("gid").unwrap().clone();
-        episode.gid = Some(gid);
-        episode.download_status = DownloadStatus::Sent;
+        if matches!(&episode.download_status, DownloadStatus::Waiting) {
+            let response = JsonRPCBuilder::new(default_user_agent_name)
+                .aria2_add_uri(None, &episode.torrent_link)
+                .build()?
+                .send(client, addr)?
+                .unwrap_response()?;
+            let gid = response.get("gid").unwrap().clone();
+            episode.gid = Some(gid);
+            episode.download_status = DownloadStatus::Sent;
+        }
     }
 
     Ok(())
