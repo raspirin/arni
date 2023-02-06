@@ -49,7 +49,7 @@ fn main() -> Result<()> {
         config.write_to_disk(default_config_path)?;
         history.write_to_disk(default_history_path)?;
 
-        let duration = time::Duration::from_secs(5);
+        let duration = time::Duration::from_secs(3600);
         std::thread::sleep(duration);
     }
 }
