@@ -19,25 +19,25 @@ fn main() -> Result<()> {
 
     loop {
         // basic loop
-        config.reload(default_config_path)?;
-        history.reload(default_history_path)?;
+        let _ = config.reload(default_config_path);
+        let _ = history.reload(default_history_path);
 
-        merge_download_list(&mut config, &mut history, &client, &mut download_list)?;
+        let _ = merge_download_list(&mut config, &mut history, &client, &mut download_list);
 
-        send_to_aria2(
+        let _ = send_to_aria2(
             default_user_agent_name,
             &client,
             &config,
             &mut download_list,
-        )?;
+        );
 
-        sync_download_status(
+        let _ = sync_download_status(
             default_user_agent_name,
             &client,
             &config,
             &mut history,
             &mut download_list,
-        )?;
+        );
 
         download_list.retain(|episode| {
             !matches!(
