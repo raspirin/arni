@@ -25,9 +25,11 @@ IMPORTANT: Arni is far away from 1.0.0 (aka. a stable version). Newer version ma
 ## TODO
 - Reduce panicking
 - Better internal structure
+- Work with systemd, launchd and sc
 - (And more)
 
 ## 待办
 - 减少 panic
 - 重构内部结构
+- Work with systemd, launchd and sc
 - (以及其他)
