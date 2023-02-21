@@ -3,7 +3,7 @@ use arni::config::Config;
 use arni::history::History;
 use arni::jsonrpc::JsonRPCBuilder;
 use arni::persist::Persist;
-use arni::{get_downloads, init_client, DownloadStatus, Episode, send_to_aria2};
+use arni::{get_downloads, init_client, send_to_aria2, DownloadStatus, Episode};
 use reqwest::blocking::Client;
 use std::time::Duration;
 
@@ -21,16 +21,16 @@ fn main() -> Result<()> {
 
     let mut first_loop = true;
     loop {
+        // basic loop
+        // TODO: improve error handling, filter out what we can do when something fails
+        // everything in this loop should never cause panicking
+
         if first_loop {
             first_loop = false;
         } else {
             std::thread::sleep(Duration::from_secs(3600));
         }
 
-        // TODO: improve error handling, filter out what we can do when something fails
-        // everything in this loop should never cause panicking
-
-        // basic loop
         // TODO: reload this two file when needed
         if config.reload(CONFIG_PATH).is_err() {
             continue;
@@ -40,22 +40,13 @@ fn main() -> Result<()> {
         }
 
         // TODO: simplify this function
-        let _ = merge_download_list(&mut config, &mut history, &client, &mut download_list);
+        if merge_download_list(&mut config, &mut history, &client, &mut download_list).is_ok() {
+            let _ = send_to_aria2(UA, &client, &config, &mut download_list);
+        }
 
-        let _ = send_to_aria2(
-            UA,
-            &client,
-            &config,
-            &mut download_list,
-        );
-
-        let _ = sync_download_status(
-            UA,
-            &client,
-            &config,
-            &mut history,
-            &mut download_list,
-        );
+        // just ignore when this function returns an error
+        // we can sync next wakeup
+        let _ = sync_download_status(UA, &client, &config, &mut history, &mut download_list);
 
         download_list.retain(|episode| {
             !matches!(
@@ -64,6 +55,7 @@ fn main() -> Result<()> {
             )
         });
 
+        // TODO: impl sync function of these two in case of failing to write to disk
         config.write_to_disk(CONFIG_PATH)?;
         history.write_to_disk(HISTORY_PATH)?;
     }
@@ -78,6 +70,7 @@ fn merge_download_list(
     let to_merge = get_downloads(client, config, history)?;
     for episode in to_merge.into_iter() {
         let mut unique = true;
+        // TODO: improve the efficiency here
         for download in download_list.iter() {
             if download.guid == episode.guid {
                 unique = false;
@@ -113,6 +106,7 @@ fn sync_download_status(
             _ => panic!("impossible download status"),
         };
 
+        // change the state in history if downloaded
         history.get_metadata_mut(&episode.guid).is_downloaded = matches!(
             &episode.download_status,
             DownloadStatus::Done | DownloadStatus::Error
