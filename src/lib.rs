@@ -1,13 +1,13 @@
 use crate::config::Config;
 use crate::error::Error;
 use crate::history::History;
+use crate::jsonrpc::JsonRPCBuilder;
 use crate::persist::Persist;
 use anyhow::Result;
 use reqwest::blocking::Client;
 use rss::Channel;
 use std::fs::File;
 use std::io::BufReader;
-use crate::jsonrpc::JsonRPCBuilder;
 
 pub mod config;
 pub mod error;
@@ -16,9 +16,13 @@ pub mod jsonrpc;
 pub mod persist;
 
 pub enum DownloadStatus {
+    /// Waiting for sending to aria2
     Waiting,
+    /// Sent to aria2
     Sent,
+    /// Finished downloading
     Done,
+    /// Something went wrong on the aria2 side
     Error,
 }
 
