@@ -1,9 +1,9 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use arni::config::Config;
 use arni::history::History;
 use arni::jsonrpc::JsonRPCBuilder;
 use arni::persist::Persist;
-use arni::{get_downloads, init_client, init_config, DownloadStatus, Episode, send_to_aria2};
+use arni::{get_downloads, init_client, DownloadStatus, Episode, send_to_aria2};
 use reqwest::blocking::Client;
 use std::time;
 
@@ -13,9 +13,9 @@ static UA: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")
 
 fn main() -> Result<()> {
     // init basic context
-    let mut config = init_config(CONFIG_PATH);
+    let mut config = Config::load(CONFIG_PATH).context("Fail to load/create config file.")?;
     // TODO: replace the history instance with sqlite instance
-    let mut history = History::load(HISTORY_PATH)?;
+    let mut history = History::load(HISTORY_PATH).context("Fail to load/create history file.")?;
     let client = init_client(UA);
     let mut download_list: Vec<Episode> = vec![];
 

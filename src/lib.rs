@@ -42,13 +42,6 @@ impl Episode {
     }
 }
 
-pub fn init_config(config_path: &str) -> Config {
-    match Config::load(config_path) {
-        Ok(config) => config,
-        Err(e) => panic!("Fail to load/create config. {e}"),
-    }
-}
-
 pub fn init_client(user_agent: &str) -> Client {
     match Client::builder().user_agent(user_agent).build() {
         Ok(c) => c,
