@@ -20,10 +20,15 @@ fn main() -> Result<()> {
     let mut download_list: Vec<Episode> = vec![];
 
     loop {
+        // TODO: improve error handling, filter out what we can do when something fails
+        // everything in this loop should never cause panicking
+
         // basic loop
+        // TODO: reload this two file when needed
         let _ = config.reload(CONFIG_PATH);
         let _ = history.reload(HISTORY_PATH);
 
+        // TODO: simplify this function
         let _ = merge_download_list(&mut config, &mut history, &client, &mut download_list);
 
         let _ = send_to_aria2(

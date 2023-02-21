@@ -116,6 +116,7 @@ pub fn get_downloads(
     config: &Config,
     history: &mut History,
 ) -> Result<Vec<Episode>> {
+    // TODO: only take out what we don't know
     let channels = get_channels(config, client)?;
     let episodes = get_episodes(&channels)?;
     let mut to_download: Vec<Episode> = vec![];
