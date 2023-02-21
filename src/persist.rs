@@ -42,6 +42,7 @@ pub trait Persist {
     }
 
     // TODO: remove the param of this function?
+    // TODO: change reload into a sync
     fn reload(&mut self, path: &str) -> Result<()>
     where
         Self: Sized,
