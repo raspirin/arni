@@ -8,20 +8,20 @@ use reqwest::blocking::Client;
 use std::time;
 
 static CONFIG_PATH: &str = "config.toml";
+static HISTORY_PATH: &str = "history.toml";
 
 fn main() -> Result<()> {
     // init basic context
-    let default_history_path = "history.toml";
     let default_user_agent_name = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
     let mut config = init_config(CONFIG_PATH);
-    let mut history = History::load(default_history_path)?;
+    let mut history = History::load(HISTORY_PATH)?;
     let client = init_client(default_user_agent_name);
     let mut download_list: Vec<Episode> = vec![];
 
     loop {
         // basic loop
         let _ = config.reload(CONFIG_PATH);
-        let _ = history.reload(default_history_path);
+        let _ = history.reload(HISTORY_PATH);
 
         let _ = merge_download_list(&mut config, &mut history, &client, &mut download_list);
 
@@ -48,7 +48,7 @@ fn main() -> Result<()> {
         });
 
         config.write_to_disk(CONFIG_PATH)?;
-        history.write_to_disk(default_history_path)?;
+        history.write_to_disk(HISTORY_PATH)?;
 
         let duration = time::Duration::from_secs(3600);
         std::thread::sleep(duration);
