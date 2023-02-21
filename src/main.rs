@@ -5,7 +5,7 @@ use arni::jsonrpc::JsonRPCBuilder;
 use arni::persist::Persist;
 use arni::{get_downloads, init_client, DownloadStatus, Episode, send_to_aria2};
 use reqwest::blocking::Client;
-use std::time;
+use std::time::Duration;
 
 static CONFIG_PATH: &str = "config.toml";
 static HISTORY_PATH: &str = "history.toml";
@@ -19,7 +19,14 @@ fn main() -> Result<()> {
     let client = init_client(UA);
     let mut download_list: Vec<Episode> = vec![];
 
+    let mut first_loop = true;
     loop {
+        if first_loop {
+            first_loop = false;
+        } else {
+            std::thread::sleep(Duration::from_secs(3600));
+        }
+
         // TODO: improve error handling, filter out what we can do when something fails
         // everything in this loop should never cause panicking
 
@@ -55,9 +62,6 @@ fn main() -> Result<()> {
 
         config.write_to_disk(CONFIG_PATH)?;
         history.write_to_disk(HISTORY_PATH)?;
-
-        let duration = time::Duration::from_secs(3600);
-        std::thread::sleep(duration);
     }
 }
 
