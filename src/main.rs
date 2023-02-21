@@ -32,8 +32,12 @@ fn main() -> Result<()> {
 
         // basic loop
         // TODO: reload this two file when needed
-        let _ = config.reload(CONFIG_PATH);
-        let _ = history.reload(HISTORY_PATH);
+        if config.reload(CONFIG_PATH).is_err() {
+            continue;
+        }
+        if history.reload(HISTORY_PATH).is_err() {
+            continue;
+        }
 
         // TODO: simplify this function
         let _ = merge_download_list(&mut config, &mut history, &client, &mut download_list);
