@@ -9,13 +9,13 @@ use std::time;
 
 static CONFIG_PATH: &str = "config.toml";
 static HISTORY_PATH: &str = "history.toml";
+static UA: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
 fn main() -> Result<()> {
     // init basic context
-    let default_user_agent_name = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
     let mut config = init_config(CONFIG_PATH);
     let mut history = History::load(HISTORY_PATH)?;
-    let client = init_client(default_user_agent_name);
+    let client = init_client(UA);
     let mut download_list: Vec<Episode> = vec![];
 
     loop {
@@ -26,14 +26,14 @@ fn main() -> Result<()> {
         let _ = merge_download_list(&mut config, &mut history, &client, &mut download_list);
 
         let _ = send_to_aria2(
-            default_user_agent_name,
+            UA,
             &client,
             &config,
             &mut download_list,
         );
 
         let _ = sync_download_status(
-            default_user_agent_name,
+            UA,
             &client,
             &config,
             &mut history,
