@@ -7,6 +7,7 @@ use reqwest::blocking::Client;
 use rss::Channel;
 use std::fs::File;
 use std::io::BufReader;
+use crate::jsonrpc::JsonRPCBuilder;
 
 pub mod config;
 pub mod error;
@@ -131,6 +132,29 @@ pub fn get_downloads(
         }
     }
     Ok(to_download)
+}
+
+pub fn send_to_aria2(
+    default_user_agent_name: &str,
+    client: &Client,
+    config: &Config,
+    download_list: &mut Vec<Episode>,
+) -> Result<()> {
+    let addr = &config.jsonrpc_address;
+    for mut episode in download_list {
+        if matches!(&episode.download_status, DownloadStatus::Waiting) {
+            let response = JsonRPCBuilder::new(default_user_agent_name)
+                .aria2_add_uri(None, &episode.torrent_link)
+                .build()?
+                .send(client, addr)?
+                .unwrap_response()?;
+            let gid = response.get("gid").unwrap().clone();
+            episode.gid = Some(gid);
+            episode.download_status = DownloadStatus::Sent;
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
