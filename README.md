@@ -26,10 +26,12 @@ IMPORTANT: Arni is far away from 1.0.0 (aka. a stable version). Newer version ma
 - Reduce panicking
 - Better internal structure
 - Work with systemd, launchd and sc
+- Replace current history struct with sqlite
 - (And more)
 
 ## 待办
 - 减少 panic
 - 重构内部结构
 - Work with systemd, launchd and sc
+- Replace current history struct with sqlite
 - (以及其他)
