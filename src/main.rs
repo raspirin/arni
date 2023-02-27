@@ -1,8 +1,9 @@
+use std::string::ToString;
 use anyhow::{Context, Result};
 use arni::config::Config;
 use arni::history::History;
 use arni::persist::Persist;
-use arni::{init_client, send_to_aria2, DownloadStatus, Episode, merge_download_list, sync_download_status};
+use arni::{init_client, send_to_aria2, DownloadStatus, Episode, merge_download_list, sync_download_status, dry_send_to_aria2};
 use std::time::Duration;
 
 static CONFIG_PATH: &str = "config.toml";
@@ -10,6 +11,7 @@ static HISTORY_PATH: &str = "history.toml";
 static UA: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
 fn main() -> Result<()> {
+    let dry_run: String = std::env::var("ARNI_DRY_RUN").unwrap_or("false".to_string());
     // init basic context
     let mut config = Config::load(CONFIG_PATH).context("Fail to load/create config file.")?;
     // TODO: replace the history instance with sqlite instance
@@ -39,12 +41,18 @@ fn main() -> Result<()> {
 
         // TODO: simplify this function
         if merge_download_list(&mut config, &mut history, &client, &mut download_list).is_ok() {
-            let _ = send_to_aria2(UA, &client, &config, &mut download_list);
+            if dry_run == "false" {
+                let _ = send_to_aria2(UA, &client, &config, &mut download_list);
+            } else {
+                let _ = dry_send_to_aria2(UA, &client, &config, &download_list);
+            }
         }
 
         // just ignore when this function returns an error
         // we can sync next wakeup
-        let _ = sync_download_status(UA, &client, &config, &mut history, &mut download_list);
+        if dry_run == "false" {
+            let _ = sync_download_status(UA, &client, &config, &mut history, &mut download_list);
+        }
 
         download_list.retain(|episode| {
             !matches!(
