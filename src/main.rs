@@ -1,10 +1,8 @@
 use anyhow::{Context, Result};
 use arni::config::Config;
 use arni::history::History;
-use arni::jsonrpc::JsonRPCBuilder;
 use arni::persist::Persist;
-use arni::{get_downloads, init_client, send_to_aria2, DownloadStatus, Episode};
-use reqwest::blocking::Client;
+use arni::{init_client, send_to_aria2, DownloadStatus, Episode, merge_download_list, sync_download_status};
 use std::time::Duration;
 
 static CONFIG_PATH: &str = "config.toml";
@@ -61,60 +59,6 @@ fn main() -> Result<()> {
     }
 }
 
-fn merge_download_list(
-    config: &mut Config,
-    history: &mut History,
-    client: &Client,
-    download_list: &mut Vec<Episode>,
-) -> Result<()> {
-    let to_merge = get_downloads(client, config, history)?;
-    for episode in to_merge.into_iter() {
-        let mut unique = true;
-        // TODO: improve the efficiency here
-        for download in download_list.iter() {
-            if download.guid == episode.guid {
-                unique = false;
-            }
-        }
-        if unique {
-            download_list.push(episode);
-        }
-    }
-
-    Ok(())
-}
-
-fn sync_download_status(
-    default_user_agent_name: &str,
-    client: &Client,
-    config: &Config,
-    history: &mut History,
-    download_list: &mut [Episode],
-) -> Result<()> {
-    let addr = &config.jsonrpc_address;
-    for episode in download_list.iter_mut() {
-        let response = JsonRPCBuilder::new(default_user_agent_name)
-            .aria2_tell_status(None, &episode.gid.clone().unwrap())
-            .build()?
-            .send(client, addr)?
-            .unwrap_response()?;
-        let status = response.get("status").unwrap().as_str();
-        episode.download_status = match status {
-            "active" | "waiting" | "paused" => DownloadStatus::Sent,
-            "error" => DownloadStatus::Error,
-            "complete" | "removed" => DownloadStatus::Done,
-            _ => panic!("impossible download status"),
-        };
-
-        // change the state in history if downloaded
-        history.get_metadata_mut(&episode.guid).is_downloaded = matches!(
-            &episode.download_status,
-            DownloadStatus::Done | DownloadStatus::Error
-        );
-    }
-
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {
