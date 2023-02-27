@@ -44,9 +44,9 @@ impl std::error::Error for JsonRPCError {
 }
 
 enum JsonRPCMethod {
-    Aria2AddUri,
-    Aria2GetVersion,
-    Aria2TellStatus,
+    AddUri,
+    GetVersion,
+    TellStatus,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -91,12 +91,18 @@ impl JsonRPC {
         Ok(ret)
     }
 
+    pub fn dry_send(&self, _client: &Client, _address: &str) -> Result<String> {
+        let json_string = self.to_string()?;
+
+        Ok(json_string)
+    }
+
     fn get_method(&self) -> JsonRPCMethod {
         if let Some(method) = &self.method {
             match method.as_str() {
-                "aria2.addUri" => JsonRPCMethod::Aria2AddUri,
-                "aria2.getVersion" => JsonRPCMethod::Aria2GetVersion,
-                "aria2.tellStatus" => JsonRPCMethod::Aria2TellStatus,
+                "aria2.addUri" => JsonRPCMethod::AddUri,
+                "aria2.getVersion" => JsonRPCMethod::GetVersion,
+                "aria2.tellStatus" => JsonRPCMethod::TellStatus,
                 _ => panic!("unreachable match arm for json rpc method"),
             }
         } else {
@@ -189,19 +195,19 @@ impl JsonRPCResponse {
 
         if let Some(v) = &self.value.get("result") {
             return match &self.method {
-                JsonRPCMethod::Aria2GetVersion => {
+                JsonRPCMethod::GetVersion => {
                     let key = "version".to_string();
                     let value = v.get("version").unwrap().to_string();
                     let ret = HashMap::from([(key, value)]);
                     Ok(ret)
                 }
-                JsonRPCMethod::Aria2AddUri => {
+                JsonRPCMethod::AddUri => {
                     let key = "gid".to_string();
                     let value = v.as_str().unwrap().to_string();
                     let ret = HashMap::from([(key, value)]);
                     Ok(ret)
                 }
-                JsonRPCMethod::Aria2TellStatus => {
+                JsonRPCMethod::TellStatus => {
                     let key = "status".to_string();
                     let unsafe_string = v.get("status").unwrap().to_string();
                     let value = Self::trim_matches(unsafe_string, '"');
