@@ -4,3 +4,4 @@ cache.toml
 config.toml
 history.toml
 rpc.json
+/temp
