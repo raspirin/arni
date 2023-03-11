@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::error::Error;
 use crate::history::History;
-use crate::persist::Persist;
+use crate::jsonrpc::JsonRPCBuilder;
 use anyhow::Result;
 use reqwest::blocking::Client;
 use rss::Channel;
@@ -17,9 +17,13 @@ pub mod persist;
 pub mod novel_config;
 
 pub enum DownloadStatus {
+    /// Waiting for sending to aria2
     Waiting,
+    /// Sent to aria2
     Sent,
+    /// Finished downloading
     Done,
+    /// Something went wrong on the aria2 side
     Error,
 }
 
@@ -40,13 +44,6 @@ impl Episode {
             gid: None,
             download_status: DownloadStatus::Waiting,
         }
-    }
-}
-
-pub fn init_config(config_path: &str) -> Config {
-    match Config::load(config_path) {
-        Ok(config) => config,
-        Err(e) => panic!("Fail to load/create config. {e}"),
     }
 }
 
@@ -119,11 +116,12 @@ fn push_episode(vec: &mut Vec<Episode>, item: &rss::Item) -> Result<()> {
     Ok(())
 }
 
-pub fn get_downloads(
+fn get_downloads(
     client: &Client,
     config: &Config,
     history: &mut History,
 ) -> Result<Vec<Episode>> {
+    // TODO: only take out what we don't know
     let channels = get_channels(config, client)?;
     let episodes = get_episodes(&channels)?;
     let mut to_download: Vec<Episode> = vec![];
@@ -133,6 +131,95 @@ pub fn get_downloads(
         }
     }
     Ok(to_download)
+}
+
+pub fn send_to_aria2(
+    default_user_agent_name: &str,
+    client: &Client,
+    config: &Config,
+    download_list: &mut Vec<Episode>,
+) -> Result<()> {
+    let addr = &config.jsonrpc_address;
+    for mut episode in download_list {
+        if matches!(&episode.download_status, DownloadStatus::Waiting) {
+            let response = JsonRPCBuilder::new(default_user_agent_name)
+                .aria2_add_uri(None, &episode.torrent_link)
+                .build()?
+                .send(client, addr)?
+                .unwrap_response()?;
+            let gid = response.get("gid").unwrap().clone();
+            episode.gid = Some(gid);
+            episode.download_status = DownloadStatus::Sent;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn dry_send_to_aria2(ua: &str, client: &Client, config: &Config, download_list: &Vec<Episode>) -> Result<()> {
+    let addr = &config.jsonrpc_address;
+    for episode in download_list {
+        let ret = JsonRPCBuilder::new(ua).aria2_add_uri(None, &episode.torrent_link).build()?.dry_send(client, addr).unwrap();
+        println!("{ret}")
+    }
+
+    Ok(())
+}
+
+
+pub fn merge_download_list(
+    config: &mut Config,
+    history: &mut History,
+    client: &Client,
+    download_list: &mut Vec<Episode>,
+) -> Result<()> {
+    let to_merge = get_downloads(client, config, history)?;
+    for episode in to_merge.into_iter() {
+        let mut unique = true;
+        // TODO: improve the efficiency here
+        for download in download_list.iter() {
+            if download.guid == episode.guid {
+                unique = false;
+            }
+        }
+        if unique {
+            download_list.push(episode);
+        }
+    }
+
+    Ok(())
+}
+
+pub fn sync_download_status(
+    default_user_agent_name: &str,
+    client: &Client,
+    config: &Config,
+    history: &mut History,
+    download_list: &mut [Episode],
+) -> Result<()> {
+    let addr = &config.jsonrpc_address;
+    for episode in download_list.iter_mut() {
+        let response = JsonRPCBuilder::new(default_user_agent_name)
+            .aria2_tell_status(None, &episode.gid.clone().unwrap())
+            .build()?
+            .send(client, addr)?
+            .unwrap_response()?;
+        let status = response.get("status").unwrap().as_str();
+        episode.download_status = match status {
+            "active" | "waiting" | "paused" => DownloadStatus::Sent,
+            "error" => DownloadStatus::Error,
+            "complete" | "removed" => DownloadStatus::Done,
+            _ => panic!("impossible download status"),
+        };
+
+        // change the state in history if downloaded
+        history.get_metadata_mut(&episode.guid).is_downloaded = matches!(
+            &episode.download_status,
+            DownloadStatus::Done | DownloadStatus::Error
+        );
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

@@ -1,24 +1,28 @@
-use anyhow::Result;
+use std::string::ToString;
+use anyhow::{Context, Result};
 use arni::config::Config;
 use arni::history::History;
-use arni::jsonrpc::JsonRPCBuilder;
 use arni::persist::Persist;
-use arni::{get_downloads, init_client, init_config, DownloadStatus, Episode};
 use reqwest::blocking::Client;
 use std::time;
 use assets_manager::AssetCache;
 
 use arni::novel_config;
 use arni::novel_config::NovelConfig;
+use arni::{init_client, send_to_aria2, DownloadStatus, Episode, merge_download_list, sync_download_status, dry_send_to_aria2};
+use std::time::Duration;
+
+static CONFIG_PATH: &str = "config.toml";
+static HISTORY_PATH: &str = "history.toml";
+static UA: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
 fn main() -> Result<()> {
+    let dry_run: String = std::env::var("ARNI_DRY_RUN").unwrap_or("false".to_string());
     // init basic context
-    let default_config_path = "config.toml";
-    let default_history_path = "history.toml";
-    let default_user_agent_name = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
-    let mut config = init_config(default_config_path);
-    let mut history = History::load(default_history_path)?;
-    let client = init_client(default_user_agent_name);
+    let mut config = Config::load(CONFIG_PATH).context("Fail to load/create config file.")?;
+    // TODO: replace the history instance with sqlite instance
+    let mut history = History::load(HISTORY_PATH).context("Fail to load/create history file.")?;
+    let client = init_client(UA);
     let mut download_list: Vec<Episode> = vec![];
 
     // ==== novel config file workspace ====
@@ -31,27 +35,40 @@ fn main() -> Result<()> {
 
     // ====      end of workspace       ====
 
+    let mut first_loop = true;
     loop {
         // basic loop
-        let _ = config.reload(default_config_path);
-        let _ = history.reload(default_history_path);
+        // TODO: improve error handling, filter out what we can do when something fails
+        // everything in this loop should never cause panicking
 
-        let _ = merge_download_list(&mut config, &mut history, &client, &mut download_list);
+        if first_loop {
+            first_loop = false;
+        } else {
+            std::thread::sleep(Duration::from_secs(3600));
+        }
 
-        let _ = send_to_aria2(
-            default_user_agent_name,
-            &client,
-            &config,
-            &mut download_list,
-        );
+        // TODO: reload this two file when needed
+        if config.reload(CONFIG_PATH).is_err() {
+            continue;
+        }
+        if history.reload(HISTORY_PATH).is_err() {
+            continue;
+        }
 
-        let _ = sync_download_status(
-            default_user_agent_name,
-            &client,
-            &config,
-            &mut history,
-            &mut download_list,
-        );
+        // TODO: simplify this function
+        if merge_download_list(&mut config, &mut history, &client, &mut download_list).is_ok() {
+            if dry_run == "false" {
+                let _ = send_to_aria2(UA, &client, &config, &mut download_list);
+            } else {
+                let _ = dry_send_to_aria2(UA, &client, &config, &download_list);
+            }
+        }
+
+        // just ignore when this function returns an error
+        // we can sync next wakeup
+        if dry_run == "false" {
+            let _ = sync_download_status(UA, &client, &config, &mut history, &mut download_list);
+        }
 
         download_list.retain(|episode| {
             !matches!(
@@ -60,89 +77,12 @@ fn main() -> Result<()> {
             )
         });
 
-        config.write_to_disk(default_config_path)?;
-        history.write_to_disk(default_history_path)?;
-
-        let duration = time::Duration::from_secs(3600);
-        std::thread::sleep(duration);
+        // TODO: impl sync function of these two in case of failing to write to disk
+        config.write_to_disk(CONFIG_PATH)?;
+        history.write_to_disk(HISTORY_PATH)?;
     }
 }
 
-fn merge_download_list(
-    config: &mut Config,
-    history: &mut History,
-    client: &Client,
-    download_list: &mut Vec<Episode>,
-) -> Result<()> {
-    let to_merge = get_downloads(client, config, history)?;
-    for episode in to_merge.into_iter() {
-        let mut unique = true;
-        for download in download_list.iter() {
-            if download.guid == episode.guid {
-                unique = false;
-            }
-        }
-        if unique {
-            download_list.push(episode);
-        }
-    }
-
-    Ok(())
-}
-
-fn sync_download_status(
-    default_user_agent_name: &str,
-    client: &Client,
-    config: &Config,
-    history: &mut History,
-    download_list: &mut [Episode],
-) -> Result<()> {
-    let addr = &config.jsonrpc_address;
-    for episode in download_list.iter_mut() {
-        let response = JsonRPCBuilder::new(default_user_agent_name)
-            .aria2_tell_status(None, &episode.gid.clone().unwrap())
-            .build()?
-            .send(client, addr)?
-            .unwrap_response()?;
-        let status = response.get("status").unwrap().as_str();
-        episode.download_status = match status {
-            "active" | "waiting" | "paused" => DownloadStatus::Sent,
-            "error" => DownloadStatus::Error,
-            "complete" | "removed" => DownloadStatus::Done,
-            _ => panic!("impossible download status"),
-        };
-
-        history.get_metadata_mut(&episode.guid).is_downloaded = matches!(
-            &episode.download_status,
-            DownloadStatus::Done | DownloadStatus::Error
-        );
-    }
-
-    Ok(())
-}
-
-fn send_to_aria2(
-    default_user_agent_name: &str,
-    client: &Client,
-    config: &Config,
-    download_list: &mut Vec<Episode>,
-) -> Result<()> {
-    let addr = &config.jsonrpc_address;
-    for mut episode in download_list {
-        if matches!(&episode.download_status, DownloadStatus::Waiting) {
-            let response = JsonRPCBuilder::new(default_user_agent_name)
-                .aria2_add_uri(None, &episode.torrent_link)
-                .build()?
-                .send(client, addr)?
-                .unwrap_response()?;
-            let gid = response.get("gid").unwrap().clone();
-            episode.gid = Some(gid);
-            episode.download_status = DownloadStatus::Sent;
-        }
-    }
-
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {

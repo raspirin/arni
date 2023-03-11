@@ -41,6 +41,8 @@ pub trait Persist {
         on_disk
     }
 
+    // TODO: remove the param of this function?
+    // TODO: change reload into a sync
     fn reload(&mut self, path: &str) -> Result<()>
     where
         Self: Sized,
