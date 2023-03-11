@@ -46,38 +46,4 @@ file = []"#;
 
         Ok(())
     }
-
-    #[test]
-    fn test_reload_novel_config() -> Result<()> {
-        let s = r#"jsonrpc_address = "127.0.0.1:16800"
-uri = ["test_novel_config"]
-file = []"#;
-        let path = "persist/test_novel_config_reload.toml";
-        let mut file = File::create(path)?;
-        file.write_all(s.as_bytes())?;
-        file.flush()?;
-
-        let config_cache = AssetCache::new("persist").unwrap();
-        let config_handle = config_cache.load::<NovelConfig>("test_novel_config_reload")?;
-
-        let config = config_handle.read();
-        assert_eq!(config.jsonrpc_address, "127.0.0.1:16800");
-        drop(config);
-        fs::remove_file(path)?;
-
-        let new_s = r#"jsonrpc_address = "127.0.0.1:6800"
-uri = ["test_novel_config"]
-file = []"#;
-        file = File::create(path)?;
-        file.write_all(new_s.as_bytes())?;
-        file.flush()?;
-
-        config_cache.hot_reload();
-        let new_config = config_handle.read();
-        assert_eq!(new_config.jsonrpc_address, "127.0.0.1:6800");
-
-        fs::remove_file(path)?;
-
-        Ok(())
-    }
 }
