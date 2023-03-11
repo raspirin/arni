@@ -6,6 +6,10 @@ use arni::persist::Persist;
 use arni::{get_downloads, init_client, init_config, DownloadStatus, Episode};
 use reqwest::blocking::Client;
 use std::time;
+use assets_manager::AssetCache;
+
+use arni::novel_config;
+use arni::novel_config::NovelConfig;
 
 fn main() -> Result<()> {
     // init basic context
@@ -16,6 +20,16 @@ fn main() -> Result<()> {
     let mut history = History::load(default_history_path)?;
     let client = init_client(default_user_agent_name);
     let mut download_list: Vec<Episode> = vec![];
+
+    // ==== novel config file workspace ====
+    let persist_folder_path = "persist";
+    let novel_config_path = "novel_config";
+
+    let persist_cache = AssetCache::new(persist_folder_path)?;
+    let config_handle= persist_cache.load::<NovelConfig>(novel_config_path)?;
+    let novel_config = config_handle.read();
+
+    // ====      end of workspace       ====
 
     loop {
         // basic loop

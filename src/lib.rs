@@ -14,6 +14,8 @@ pub mod history;
 pub mod jsonrpc;
 pub mod persist;
 
+pub mod novel_config;
+
 pub enum DownloadStatus {
     Waiting,
     Sent,
