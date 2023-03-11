@@ -1,23 +1,23 @@
-use std::string::ToString;
 use anyhow::{Context, Result};
 use arni::config::Config;
 use arni::history::History;
 use arni::persist::Persist;
-use reqwest::blocking::Client;
-use std::time;
+use arni::{
+    dry_send_to_aria2, init_client, merge_download_list, send_to_aria2, sync_download_status,
+    DownloadStatus, Episode,
+};
 use assets_manager::AssetCache;
-
-use arni::novel_config;
-use arni::novel_config::NovelConfig;
-use arni::{init_client, send_to_aria2, DownloadStatus, Episode, merge_download_list, sync_download_status, dry_send_to_aria2};
+use std::string::ToString;
 use std::time::Duration;
+
+use arni::novel_config::NovelConfig;
 
 static CONFIG_PATH: &str = "config.toml";
 static HISTORY_PATH: &str = "history.toml";
 static UA: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
 fn main() -> Result<()> {
-    let dry_run: String = std::env::var("ARNI_DRY_RUN").unwrap_or("false".to_string());
+    let dry_run: String = std::env::var("ARNI_DRY_RUN").unwrap_or_else(|_| "false".to_string());
     // init basic context
     let mut config = Config::load(CONFIG_PATH).context("Fail to load/create config file.")?;
     // TODO: replace the history instance with sqlite instance
@@ -30,7 +30,7 @@ fn main() -> Result<()> {
     let novel_config_path = "novel_config";
 
     let persist_cache = AssetCache::new(persist_folder_path)?;
-    let config_handle= persist_cache.load::<NovelConfig>(novel_config_path)?;
+    let config_handle = persist_cache.load::<NovelConfig>(novel_config_path)?;
     let novel_config = config_handle.read();
 
     // ====      end of workspace       ====
@@ -82,7 +82,6 @@ fn main() -> Result<()> {
         history.write_to_disk(HISTORY_PATH)?;
     }
 }
-
 
 #[cfg(test)]
 mod tests {

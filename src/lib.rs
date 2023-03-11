@@ -116,11 +116,7 @@ fn push_episode(vec: &mut Vec<Episode>, item: &rss::Item) -> Result<()> {
     Ok(())
 }
 
-fn get_downloads(
-    client: &Client,
-    config: &Config,
-    history: &mut History,
-) -> Result<Vec<Episode>> {
+fn get_downloads(client: &Client, config: &Config, history: &mut History) -> Result<Vec<Episode>> {
     // TODO: only take out what we don't know
     let channels = get_channels(config, client)?;
     let episodes = get_episodes(&channels)?;
@@ -156,16 +152,24 @@ pub fn send_to_aria2(
     Ok(())
 }
 
-pub fn dry_send_to_aria2(ua: &str, client: &Client, config: &Config, download_list: &Vec<Episode>) -> Result<()> {
+pub fn dry_send_to_aria2(
+    ua: &str,
+    client: &Client,
+    config: &Config,
+    download_list: &Vec<Episode>,
+) -> Result<()> {
     let addr = &config.jsonrpc_address;
     for episode in download_list {
-        let ret = JsonRPCBuilder::new(ua).aria2_add_uri(None, &episode.torrent_link).build()?.dry_send(client, addr).unwrap();
+        let ret = JsonRPCBuilder::new(ua)
+            .aria2_add_uri(None, &episode.torrent_link)
+            .build()?
+            .dry_send(client, addr)
+            .unwrap();
         println!("{ret}")
     }
 
     Ok(())
 }
-
 
 pub fn merge_download_list(
     config: &mut Config,
