@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use arni::novel_config::NovelConfig;
 
-static CONFIG_PATH: &str = "config.toml";
+//static CONFIG_PATH: &str = "config.toml";
 static HISTORY_PATH: &str = "history.toml";
 static UA: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     let dry_run: String = std::env::var("ARNI_DRY_RUN").unwrap_or_else(|_| "false".to_string());
 
     // init basic context
-    let mut _config = Config::load(CONFIG_PATH).context("Fail to load/create config file.")?;
+    //let mut _config = Config::load(CONFIG_PATH).context("Fail to load/create config file.")?;
     // TODO: replace the history instance with sqlite instance
     let mut history = History::load(HISTORY_PATH).context("Fail to load/create history file.")?;
     let client = init_client(UA);
