@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use arni::config::Config;
 use arni::history::History;
 use arni::persist::Persist;
 use arni::{
@@ -12,7 +11,6 @@ use std::time::Duration;
 
 use arni::novel_config::NovelConfig;
 
-//static CONFIG_PATH: &str = "config.toml";
 static HISTORY_PATH: &str = "history.toml";
 static UA: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
@@ -20,21 +18,15 @@ fn main() -> Result<()> {
     let dry_run: String = std::env::var("ARNI_DRY_RUN").unwrap_or_else(|_| "false".to_string());
 
     // init basic context
-    //let mut _config = Config::load(CONFIG_PATH).context("Fail to load/create config file.")?;
     // TODO: replace the history instance with sqlite instance
-    let mut history = History::load(HISTORY_PATH).context("Fail to load/create history file.")?;
-    let client = init_client(UA);
-    let mut download_list: Vec<Episode> = vec![];
-
-    // ==== novel config file workspace ====
-
     let persist_folder_path = "persist";
     let novel_config_path = "novel_config";
-
     let persist_cache = AssetCache::new(persist_folder_path)?;
     let config_handle = persist_cache.load::<NovelConfig>(novel_config_path)?;
 
-    // ====      end of workspace       ====
+    let mut history = History::load(HISTORY_PATH).context("Fail to load/create history file.")?;
+    let client = init_client(UA);
+    let mut download_list: Vec<Episode> = vec![];
 
     let mut first_loop = true;
     loop {
@@ -52,9 +44,6 @@ fn main() -> Result<()> {
         }
 
         // TODO: reload this two file when needed
-        // if config.reload(CONFIG_PATH).is_err() {
-        //     continue;
-        // }
         if history.reload(HISTORY_PATH).is_err() {
             continue;
         }
@@ -82,7 +71,6 @@ fn main() -> Result<()> {
         });
 
         // TODO: impl sync function of these two in case of failing to write to disk
-        //config.write_to_disk(CONFIG_PATH)?;
         history.write_to_disk(HISTORY_PATH)?;
     }
 }
