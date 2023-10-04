@@ -7,12 +7,16 @@ use reqwest::blocking::Client;
 use rss::Channel;
 use std::fs::File;
 use std::io::BufReader;
+use assets_manager::AssetGuard;
+use crate::novel_config::NovelConfig;
 
 pub mod config;
 pub mod error;
 pub mod history;
 pub mod jsonrpc;
 pub mod persist;
+
+pub mod novel_config;
 
 pub enum DownloadStatus {
     /// Waiting for sending to aria2
@@ -52,7 +56,7 @@ pub fn init_client(user_agent: &str) -> Client {
     }
 }
 
-fn get_channels(config: &Config, client: &Client) -> Result<Vec<Channel>> {
+fn get_channels(config: &AssetGuard<NovelConfig>, client: &Client) -> Result<Vec<Channel>> {
     let mut ret: Vec<Channel> = vec![];
 
     if let Some(uris) = &config.uri {
@@ -114,11 +118,7 @@ fn push_episode(vec: &mut Vec<Episode>, item: &rss::Item) -> Result<()> {
     Ok(())
 }
 
-fn get_downloads(
-    client: &Client,
-    config: &Config,
-    history: &mut History,
-) -> Result<Vec<Episode>> {
+fn get_downloads(client: &Client, config: &AssetGuard<NovelConfig>, history: &mut History) -> Result<Vec<Episode>> {
     // TODO: only take out what we don't know
     let channels = get_channels(config, client)?;
     let episodes = get_episodes(&channels)?;
@@ -134,7 +134,7 @@ fn get_downloads(
 pub fn send_to_aria2(
     default_user_agent_name: &str,
     client: &Client,
-    config: &Config,
+    config: &AssetGuard<NovelConfig>,
     download_list: &mut Vec<Episode>,
 ) -> Result<()> {
     let addr = &config.jsonrpc_address;
@@ -154,19 +154,27 @@ pub fn send_to_aria2(
     Ok(())
 }
 
-pub fn dry_send_to_aria2(ua: &str, client: &Client, config: &Config, download_list: &Vec<Episode>) -> Result<()> {
+pub fn dry_send_to_aria2(
+    ua: &str,
+    client: &Client,
+    config: &AssetGuard<NovelConfig>,
+    download_list: &Vec<Episode>,
+) -> Result<()> {
     let addr = &config.jsonrpc_address;
     for episode in download_list {
-        let ret = JsonRPCBuilder::new(ua).aria2_add_uri(None, &episode.torrent_link).build()?.dry_send(client, addr).unwrap();
+        let ret = JsonRPCBuilder::new(ua)
+            .aria2_add_uri(None, &episode.torrent_link)
+            .build()?
+            .dry_send(client, addr)
+            .unwrap();
         println!("{ret}")
     }
 
     Ok(())
 }
 
-
 pub fn merge_download_list(
-    config: &mut Config,
+    config: &AssetGuard<NovelConfig>,
     history: &mut History,
     client: &Client,
     download_list: &mut Vec<Episode>,
@@ -191,7 +199,7 @@ pub fn merge_download_list(
 pub fn sync_download_status(
     default_user_agent_name: &str,
     client: &Client,
-    config: &Config,
+    config: &AssetGuard<NovelConfig>,
     history: &mut History,
     download_list: &mut [Episode],
 ) -> Result<()> {

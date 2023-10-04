@@ -4,4 +4,7 @@ cache.toml
 config.toml
 history.toml
 rpc.json
+persist/novel_config.toml
+novel_history.toml
+/persist
 /temp
