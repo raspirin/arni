@@ -23,15 +23,11 @@ IMPORTANT: Arni is far away from 1.0.0 (aka. a stable version). Newer version ma
 - 简单的历史记录功能
 
 ## TODO
-- Reduce panicking
-- Better internal structure
-- Work with systemd, launchd and sc
-- Replace current history struct with sqlite
+- One-shot mode and loop mode
+- Less bugs
 - (And more)
 
 ## 待办
-- 减少 panic
-- 重构内部结构
-- Work with systemd, launchd and sc
-- Replace current history struct with sqlite
+- 可以选择执行一次或循环执行
+- 更少的 bug
 - (以及其他)
