@@ -5,6 +5,7 @@ use std::fmt::Formatter;
 pub enum Error {
     BadTorrentLink,
     JsonRPCNotReady,
+    ImpossibleEpisodeState,
     RPCServerError(JsonRPCError),
 }
 
@@ -13,6 +14,7 @@ impl std::fmt::Display for Error {
         let msg = match &self {
             Self::BadTorrentLink => "can not find torrent link".to_string(),
             Self::JsonRPCNotReady => "jsonrpc not ready".to_string(),
+            Self::ImpossibleEpisodeState => "Impossible Episode State".to_string(),
             Self::RPCServerError(e) => format!("{e}"),
         };
         write!(f, "{msg}")
@@ -22,10 +24,15 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match &self {
-            Self::BadTorrentLink => None,
-            Self::JsonRPCNotReady => None,
             Self::RPCServerError(e) => Some(e),
+            _ => None,
         }
+    }
+}
+
+impl From<JsonRPCError> for Error {
+    fn from(value: JsonRPCError) -> Self {
+        Self::RPCServerError(value)
     }
 }
 

@@ -13,4 +13,3 @@ serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"
 toml = "0.7.1"
 anyhow = "1.0.68"
-assets_manager = { version = "0.9.7", features = ["toml", "hot-reloading"] }

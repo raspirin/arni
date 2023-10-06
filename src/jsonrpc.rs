@@ -1,13 +1,9 @@
 use crate::error::Error;
 use anyhow::Result;
-use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
 use std::fmt::Formatter;
-use std::io::Read;
-
-type Options<'a> = HashMap<&'a str, &'a str>;
 
 #[derive(Debug)]
 pub enum JsonRPCError {
@@ -43,7 +39,7 @@ impl std::error::Error for JsonRPCError {
     }
 }
 
-enum JsonRPCMethod {
+pub enum JsonRPCMethod {
     AddUri,
     GetVersion,
     TellStatus,
@@ -77,27 +73,7 @@ impl JsonRPC {
         Ok(ret)
     }
 
-    pub fn send(&self, client: &Client, address: &str) -> Result<JsonRPCResponse> {
-        let json_string = self.to_string()?;
-        let mut client_response = client.post(address).body(json_string).send()?;
-        let mut client_response_string = String::new();
-        client_response.read_to_string(&mut client_response_string)?;
-        let response_value: serde_json::Value = serde_json::from_str(&client_response_string)?;
-        let method = self.get_method();
-        let ret = JsonRPCResponse {
-            value: response_value,
-            method,
-        };
-        Ok(ret)
-    }
-
-    pub fn dry_send(&self, _client: &Client, _address: &str) -> Result<String> {
-        let json_string = self.to_string()?;
-
-        Ok(json_string)
-    }
-
-    fn get_method(&self) -> JsonRPCMethod {
+    pub fn get_method(&self) -> JsonRPCMethod {
         if let Some(method) = &self.method {
             match method.as_str() {
                 "aria2.addUri" => JsonRPCMethod::AddUri,
@@ -173,8 +149,8 @@ impl JsonRPCBuilder {
 }
 
 pub struct JsonRPCResponse {
-    value: serde_json::Value,
-    method: JsonRPCMethod,
+    pub value: serde_json::Value,
+    pub method: JsonRPCMethod,
 }
 
 impl JsonRPCResponse {
