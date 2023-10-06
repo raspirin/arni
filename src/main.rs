@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use arni::{
     app::App,
@@ -17,6 +19,7 @@ fn main() -> Result<()> {
 
     loop {
         let _ = app.run(dry_run);
+        std::thread::sleep(Duration::from_secs(3600));
     }
 }
 
