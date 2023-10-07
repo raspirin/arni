@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, Context};
 use std::{
     fs::File,
     io::{self, Write},
@@ -19,15 +19,15 @@ pub struct Config<'a> {
 impl<'a> Config<'a> {
     pub fn new(path: &'a str) -> Result<Self> {
         let path = Path::new(path);
-        let file = File::open(path).and_then(io::read_to_string);
-        let inner = match file {
-            Ok(toml) => toml::from_str(&toml).unwrap_or_default(),
-            Err(_) => {
-                let mut file = File::create(path)?;
-                let ret = SerdeConfig::default();
-                file.write_all(toml::to_string_pretty(&ret)?.as_bytes())?;
-                ret
-            }
+        let inner = if path.exists() {
+            let file = File::open(path).with_context(|| "Fail to open path.")?;
+            let file = io::read_to_string(file).with_context(|| "Fail to read on disk config file.")?;
+            toml::from_str(&file).with_context(|| "Fail to parse config file.")?
+        } else {
+            let mut file = File::create(path).with_context(|| "Fail to create config file.")?;
+            let ret = SerdeConfig::default();
+            file.write_all(toml::to_string_pretty(&ret).with_context(|| "Fail to write new config file back.")?.as_bytes())?;
+            ret
         };
         let modified_time = path.metadata()?.modified()?;
 
@@ -68,8 +68,9 @@ impl SyncFile for Config<'_> {
     }
 
     fn write_back(&mut self) -> Result<()> {
-        let mut file = File::open(self.path)?;
-        file.write_all(toml::to_string_pretty(&self.inner)?.as_bytes())?;
+        let mut file = File::create(self.path).with_context(|| "Fail to write back.")?;
+        let toml = toml::to_string_pretty(&self.inner)?;
+        file.write_all(toml.as_bytes())?;
         self.modified_time = self.path.metadata()?.modified()?;
         Ok(())
     }

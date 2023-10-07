@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Result, Context};
 use arni::{
     app::App,
     config::{Config, History},
@@ -21,10 +21,10 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let config = "config.toml";
-    let mut config = Config::new(config)?;
+    let mut config = Config::new(config).with_context(|| "Init config failed.")?;
 
     let history = "history.toml";
-    let mut history = History::new(history)?;
+    let mut history = History::new(history).with_context(|| "Init history failed.")?;
 
     let mut app = App::new(&mut config, &mut history)?;
 
@@ -34,8 +34,9 @@ fn main() -> Result<()> {
             std::thread::sleep(Duration::from_secs(3600));
         }
     } else {
-        app.run(cli.dry_run)
+        app.run(cli.dry_run)?;
     }
+    Ok(())
 }
 
 #[cfg(test)]

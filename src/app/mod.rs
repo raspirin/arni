@@ -1,6 +1,6 @@
 use std::{fs::File, io::BufReader};
 
-use anyhow::Result;
+use anyhow::{Result, Context};
 use rss::Channel;
 
 use crate::{
@@ -158,8 +158,8 @@ impl<'a> App<'a> {
 
     pub fn run(&mut self, dry_run: bool) -> Result<()> {
         // reload
-        self.config.sync()?;
-        self.history.sync()?;
+        self.config.sync().with_context(|| "Can't sync config (p1)")?;
+        self.history.sync().with_context(|| "Can't sync history (p1)")?;
 
         // get episodes from rss
         let channels = self.get_rss_channels()?;
