@@ -1,6 +1,7 @@
 use std::{fs::File, io::BufReader};
 
 use anyhow::{Result, Context};
+use log::{info, warn};
 use rss::Channel;
 
 use crate::{
@@ -146,7 +147,8 @@ impl<'a> App<'a> {
         history: &'a mut History<'a>,
         ua: UA,
     ) -> Result<Self> {
-        let client = Client::with_ua(ua.as_str())?;
+        info!("Creating in-app client...");
+        let client = Client::with_ua(ua.as_str()).map_err(|e| {warn!("Fail to create in-app client"); e})?;
         Ok(Self {
             config,
             history,
@@ -158,15 +160,20 @@ impl<'a> App<'a> {
 
     pub fn run(&mut self, dry_run: bool) -> Result<()> {
         // reload
-        self.config.sync().with_context(|| "Can't sync config (p1)")?;
-        self.history.sync().with_context(|| "Can't sync history (p1)")?;
+        info!("P1 syncing config");
+        self.config.sync().with_context(|| "Can't sync config (p1)").map_err(|e| {warn!("P1 config sync failed: {}",e); e})?;
+        info!("P1 syncing history");
+        self.history.sync().with_context(|| "Can't sync history (p1)").map_err(|e| {warn!("P1 history sync failed: {}", e); e})?;
 
         // get episodes from rss
-        let channels = self.get_rss_channels()?;
+        info!("Getting episodes from rss...");
+        info!("Getting rss channels...");
+        let channels = self.get_rss_channels().map_err(|e| {warn!("Fail to getting rss channels: {e}"); e})?;
         let mut episodes: Vec<Episode> = vec![];
+        info!("Collecting episodes...");
         for channel in channels {
             for item in channel.items {
-                episodes.push(Episode::try_from(item)?)
+                episodes.push(Episode::try_from(item).map_err(|e| {warn!("Can't convert Item into Episode: {e}"); e})?)
             }
         }
         let episodes = episodes
@@ -180,6 +187,7 @@ impl<'a> App<'a> {
             .append(&mut episodes.collect::<Vec<Episode>>());
 
         // send episode to aria2
+        info!("Sending episodes to aria2");
         for epi in self
             .download_list
             .iter_mut()
@@ -188,9 +196,9 @@ impl<'a> App<'a> {
         {
             let jsonrpc = JsonRPCBuilder::new(&self.ua.inner)
                 .aria2_add_uri(None, &epi.torrent_link)
-                .build()?;
+                .build().map_err(|e| {warn!("Fail to build JsonRPC: {e}"); e})?;
             if !dry_run {
-                let response = self.client.send(self.config.aria2_address(), jsonrpc)?;
+                let response = self.client.send(self.config.aria2_address(), jsonrpc).map_err(|e| {warn!("Fail to get JsonRPC's response: {e}"); e})?;
                 // TODO: will this panic?
                 let gid = response.unwrap_response()?.get("gid").unwrap().to_string();
                 epi.gid = Some(gid);
@@ -202,12 +210,13 @@ impl<'a> App<'a> {
         }
 
         // sync download status
+        info!("Syncing download status");
         for epi in self.download_list.iter_mut().filter(|epi| epi.is_sent()) {
             let jsonrpc = JsonRPCBuilder::new(&self.ua.inner)
                 .aria2_tell_status(None, &epi.gid()?)
-                .build()?;
+                .build().map_err(|e| {warn!("Fail to build JsonRPC: {e}"); e})?;
             if !dry_run {
-                let response = self.client.send(self.config.aria2_address(), jsonrpc)?;
+                let response = self.client.send(self.config.aria2_address(), jsonrpc).map_err(|e| {warn!("Fail to get JsonRPC's response: {e}"); e})?;
                 let status = response
                     .unwrap_response()?
                     .get("status")
@@ -221,6 +230,7 @@ impl<'a> App<'a> {
         }
 
         // update history
+        info!("Updating history...");
         for epi in self.download_list.iter().filter(|epi| epi.is_done()) {
             self.history.push(&epi.guid);
         }
@@ -229,8 +239,10 @@ impl<'a> App<'a> {
         self.download_list.retain(|epi| !epi.is_done());
 
         // write back
-        self.config.sync()?;
-        self.history.sync()?;
+        info!("P2 syncing config...");
+        self.config.sync().map_err(|e| {warn!("P2 config sync failed: {e}"); e})?;
+        info!("P2 syncing history...");
+        self.history.sync().map_err(|e| {warn!("P2 history sync failed: {e}"); e})?;
 
         Ok(())
     }
