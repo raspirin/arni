@@ -5,7 +5,7 @@ use std::{
     time::SystemTime,
 };
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 use super::SyncFile;
@@ -22,7 +22,8 @@ impl<'a> History<'a> {
         let path = Path::new(path);
         let inner = if path.exists() {
             let file = File::open(path).with_context(|| "Fail to open path.")?;
-            let file = io::read_to_string(file).with_context(|| "Fail to read on disk history file.")?;
+            let file =
+                io::read_to_string(file).with_context(|| "Fail to read on disk history file.")?;
             toml::from_str(&file).with_context(|| "Fail to parse history file.")?
         } else {
             let mut file = File::create(path).with_context(|| "Fail to create history file.")?;

@@ -1,12 +1,12 @@
 use std::time::Duration;
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use arni::{
     app::App,
     config::{Config, History},
 };
 use clap::Parser;
-use log::{info, error, warn};
+use log::{error, info};
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about=None)]
@@ -26,11 +26,21 @@ fn main() -> Result<()> {
 
     info!("Init config...");
     let config = "config.toml";
-    let mut config = Config::new(config).with_context(|| "Init config failed.").map_err(|e| {error!("Can't init config: {e}"); e})?;
+    let mut config = Config::new(config)
+        .with_context(|| "Init config failed.")
+        .map_err(|e| {
+            error!("Can't init config: {e}");
+            e
+        })?;
 
     info!("Init history...");
     let history = "history.toml";
-    let mut history = History::new(history).with_context(|| "Init history failed.").map_err(|e| {error!("Can't init history: {e}"); e})?;
+    let mut history = History::new(history)
+        .with_context(|| "Init history failed.")
+        .map_err(|e| {
+            error!("Can't init history: {e}");
+            e
+        })?;
 
     info!("Starting app...");
     let mut app = App::new(&mut config, &mut history)?;

@@ -1,6 +1,6 @@
 use std::{fs::File, io::BufReader};
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use log::{info, warn};
 use rss::Channel;
 
@@ -148,7 +148,10 @@ impl<'a> App<'a> {
         ua: UA,
     ) -> Result<Self> {
         info!("Creating in-app client...");
-        let client = Client::with_ua(ua.as_str()).map_err(|e| {warn!("Fail to create in-app client"); e})?;
+        let client = Client::with_ua(ua.as_str()).map_err(|e| {
+            warn!("Fail to create in-app client");
+            e
+        })?;
         Ok(Self {
             config,
             history,
@@ -161,19 +164,37 @@ impl<'a> App<'a> {
     pub fn run(&mut self, dry_run: bool) -> Result<()> {
         // reload
         info!("P1 syncing config");
-        self.config.sync().with_context(|| "Can't sync config (p1)").map_err(|e| {warn!("P1 config sync failed: {}",e); e})?;
+        self.config
+            .sync()
+            .with_context(|| "Can't sync config (p1)")
+            .map_err(|e| {
+                warn!("P1 config sync failed: {}", e);
+                e
+            })?;
         info!("P1 syncing history");
-        self.history.sync().with_context(|| "Can't sync history (p1)").map_err(|e| {warn!("P1 history sync failed: {}", e); e})?;
+        self.history
+            .sync()
+            .with_context(|| "Can't sync history (p1)")
+            .map_err(|e| {
+                warn!("P1 history sync failed: {}", e);
+                e
+            })?;
 
         // get episodes from rss
         info!("Getting episodes from rss...");
         info!("Getting rss channels...");
-        let channels = self.get_rss_channels().map_err(|e| {warn!("Fail to getting rss channels: {e}"); e})?;
+        let channels = self.get_rss_channels().map_err(|e| {
+            warn!("Fail to getting rss channels: {e}");
+            e
+        })?;
         let mut episodes: Vec<Episode> = vec![];
         info!("Collecting episodes...");
         for channel in channels {
             for item in channel.items {
-                episodes.push(Episode::try_from(item).map_err(|e| {warn!("Can't convert Item into Episode: {e}"); e})?)
+                episodes.push(Episode::try_from(item).map_err(|e| {
+                    warn!("Can't convert Item into Episode: {e}");
+                    e
+                })?)
             }
         }
         let episodes = episodes
@@ -196,9 +217,19 @@ impl<'a> App<'a> {
         {
             let jsonrpc = JsonRPCBuilder::new(&self.ua.inner)
                 .aria2_add_uri(None, &epi.torrent_link)
-                .build().map_err(|e| {warn!("Fail to build JsonRPC: {e}"); e})?;
+                .build()
+                .map_err(|e| {
+                    warn!("Fail to build JsonRPC: {e}");
+                    e
+                })?;
             if !dry_run {
-                let response = self.client.send(self.config.aria2_address(), jsonrpc).map_err(|e| {warn!("Fail to get JsonRPC's response: {e}"); e})?;
+                let response = self
+                    .client
+                    .send(self.config.aria2_address(), jsonrpc)
+                    .map_err(|e| {
+                        warn!("Fail to get JsonRPC's response: {e}");
+                        e
+                    })?;
                 // TODO: will this panic?
                 let gid = response.unwrap_response()?.get("gid").unwrap().to_string();
                 epi.gid = Some(gid);
@@ -214,9 +245,19 @@ impl<'a> App<'a> {
         for epi in self.download_list.iter_mut().filter(|epi| epi.is_sent()) {
             let jsonrpc = JsonRPCBuilder::new(&self.ua.inner)
                 .aria2_tell_status(None, &epi.gid()?)
-                .build().map_err(|e| {warn!("Fail to build JsonRPC: {e}"); e})?;
+                .build()
+                .map_err(|e| {
+                    warn!("Fail to build JsonRPC: {e}");
+                    e
+                })?;
             if !dry_run {
-                let response = self.client.send(self.config.aria2_address(), jsonrpc).map_err(|e| {warn!("Fail to get JsonRPC's response: {e}"); e})?;
+                let response = self
+                    .client
+                    .send(self.config.aria2_address(), jsonrpc)
+                    .map_err(|e| {
+                        warn!("Fail to get JsonRPC's response: {e}");
+                        e
+                    })?;
                 let status = response
                     .unwrap_response()?
                     .get("status")
@@ -240,9 +281,15 @@ impl<'a> App<'a> {
 
         // write back
         info!("P2 syncing config...");
-        self.config.sync().map_err(|e| {warn!("P2 config sync failed: {e}"); e})?;
+        self.config.sync().map_err(|e| {
+            warn!("P2 config sync failed: {e}");
+            e
+        })?;
         info!("P2 syncing history...");
-        self.history.sync().map_err(|e| {warn!("P2 history sync failed: {e}"); e})?;
+        self.history.sync().map_err(|e| {
+            warn!("P2 history sync failed: {e}");
+            e
+        })?;
 
         Ok(())
     }
