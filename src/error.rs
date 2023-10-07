@@ -7,6 +7,7 @@ pub enum Error {
     JsonRPCNotReady,
     ImpossibleEpisodeState,
     RPCServerError(JsonRPCError),
+    Aria2ConnectionError,
 }
 
 impl std::fmt::Display for Error {
@@ -15,6 +16,7 @@ impl std::fmt::Display for Error {
             Self::BadTorrentLink => "can not find torrent link".to_string(),
             Self::JsonRPCNotReady => "jsonrpc not ready".to_string(),
             Self::ImpossibleEpisodeState => "Impossible Episode State".to_string(),
+            Self::Aria2ConnectionError => "Can't connect to aria2".to_string(),
             Self::RPCServerError(e) => format!("{e}"),
         };
         write!(f, "{msg}")

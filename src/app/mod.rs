@@ -1,7 +1,7 @@
 use std::{fs::File, io::BufReader};
 
 use anyhow::{Context, Result};
-use log::{info, warn};
+use log::{error, info, warn};
 use rss::Channel;
 
 use crate::{
@@ -152,16 +152,24 @@ impl<'a> App<'a> {
             warn!("Fail to create in-app client");
             e
         })?;
-        Ok(Self {
+
+        let mut ret = Self {
             config,
             history,
             client,
             ua,
             download_list: vec![],
-        })
+        };
+
+        Ok(ret)
     }
 
     pub fn run(&mut self, dry_run: bool) -> Result<()> {
+        if self.check_aria2_connection() && !dry_run {
+            info!("Can't connect to aria2.");
+            info!("waiting for next loop.");
+            return Err(Error::Aria2ConnectionError.into());
+        }
         // reload
         info!("P1 syncing config");
         self.config
@@ -319,5 +327,34 @@ impl<'a> App<'a> {
         }
 
         Ok(ret)
+    }
+
+    fn check_aria2_connection(&mut self) -> bool {
+        info!("Checking connectin with aria2");
+        let jsonrpc = JsonRPCBuilder::new(self.ua.as_str())
+            .aria2_get_version(None)
+            .build();
+        let jsonrpc = match jsonrpc {
+            Ok(jsonrpc) => jsonrpc,
+            Err(e) => {
+                error!("Can't build jsonrpc");
+                return false;
+            }
+        };
+        let response = self
+            .client
+            .send(&self.config.aria2_address(), jsonrpc)
+            .map_err(|e| {
+                error!("Can't get response from aria2.");
+                e
+            });
+        let response = match response {
+            Ok(r) => r,
+            Err(e) => return false,
+        };
+        let response = response.unwrap_response().unwrap();
+        let version = response.get("version").unwrap();
+        info!("Connection with aria2: {version}");
+        true
     }
 }
