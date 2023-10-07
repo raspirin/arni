@@ -196,9 +196,7 @@ impl<'a> App<'a> {
                 epi.gid = Some(gid);
                 epi.set_sent();
             } else {
-                let response = self
-                    .client
-                    .dry_send(self.config.aria2_address(), jsonrpc)?;
+                let response = self.client.dry_send(self.config.aria2_address(), jsonrpc)?;
                 println!("dry run: {}", response);
             }
         }
@@ -217,9 +215,7 @@ impl<'a> App<'a> {
                     .to_string();
                 epi.set_download_status(&status)?;
             } else {
-                let response = self
-                    .client
-                    .dry_send(self.config.aria2_address(), jsonrpc)?;
+                let response = self.client.dry_send(self.config.aria2_address(), jsonrpc)?;
                 println!("dry run: {}", response)
             }
         }

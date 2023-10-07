@@ -5,9 +5,20 @@ use arni::{
     app::App,
     config::{Config, History},
 };
+use clap::Parser;
+
+#[derive(Debug, Parser)]
+#[command(author, version, about, long_about=None)]
+struct Cli {
+    #[arg(short, long)]
+    watch: bool,
+
+    #[arg(long)]
+    dry_run: bool,
+}
 
 fn main() -> Result<()> {
-    let dry_run: bool = std::env::var("ARNI_DRY_RUN").unwrap_or_else(|_| "false".to_string()).trim().parse()?;
+    let cli = Cli::parse();
 
     let config = "config.toml";
     let mut config = Config::new(config)?;
@@ -17,9 +28,13 @@ fn main() -> Result<()> {
 
     let mut app = App::new(&mut config, &mut history)?;
 
-    loop {
-        let _ = app.run(dry_run);
-        std::thread::sleep(Duration::from_secs(3600));
+    if cli.watch {
+        loop {
+            let _ = app.run(cli.dry_run);
+            std::thread::sleep(Duration::from_secs(3600));
+        }
+    } else {
+        app.run(cli.dry_run)
     }
 }
 
