@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{time::Duration, path::Path};
 
 use anyhow::{Context, Result};
 use arni::{
@@ -11,8 +11,13 @@ use log::{error, info};
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about=None)]
 struct Cli {
+    /// Run continously
     #[arg(short, long)]
     watch: bool,
+    
+    /// Directory of config and history
+    #[arg(short = 'd', long = "working_directory", value_name = "PATH")]
+    working_dir: Option<String>,
 
     #[arg(long)]
     dry_run: bool,
@@ -26,7 +31,12 @@ fn main() -> Result<()> {
 
     info!("Init config...");
     let config = "config.toml";
-    let mut config = Config::new(config)
+    let config = if let Some(dir) = &cli.working_dir {
+        format!("{dir}/{config}")
+    } else {
+        config.to_string()
+    };
+    let mut config = Config::new(&config)
         .with_context(|| "Init config failed.")
         .map_err(|e| {
             error!("Can't init config: {e}");
@@ -35,7 +45,12 @@ fn main() -> Result<()> {
 
     info!("Init history...");
     let history = "history.toml";
-    let mut history = History::new(history)
+    let history = if let Some(dir) = &cli.working_dir {
+        format!("{dir}/{history}")
+    } else {
+        history.to_string()
+    };
+    let mut history = History::new(&history)
         .with_context(|| "Init history failed.")
         .map_err(|e| {
             error!("Can't init history: {e}");
