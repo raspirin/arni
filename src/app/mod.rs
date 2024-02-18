@@ -5,39 +5,12 @@ use log::{error, info, warn};
 use rss::Channel;
 
 use crate::{
-    client::Client,
+    client::{Client, UA},
     config::{Config, History, SyncFile},
     error::Error,
     jsonrpc::JsonRPCBuilder,
 };
 
-pub struct UA {
-    inner: String,
-}
-
-impl UA {
-    pub fn new(ua: &str) -> Self {
-        Self {
-            inner: ua.to_string(),
-        }
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.inner
-    }
-
-    pub fn into_string(self) -> String {
-        self.inner
-    }
-}
-
-impl Default for UA {
-    fn default() -> Self {
-        Self {
-            inner: concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")).to_string(),
-        }
-    }
-}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DownloadStatus {
@@ -133,22 +106,21 @@ pub struct App<'a> {
     pub config: &'a mut Config<'a>,
     pub history: &'a mut History<'a>,
     pub client: Client,
-    ua: UA,
     download_list: Vec<Episode>,
+    ua: UA,
 }
 
 impl<'a> App<'a> {
     pub fn new(config: &'a mut Config<'a>, history: &'a mut History<'a>) -> Result<Self> {
-        Self::with_ua(config, history, UA::default())
+        Self::with_ua(config, history)
     }
 
     pub fn with_ua(
         config: &'a mut Config<'a>,
         history: &'a mut History<'a>,
-        ua: UA,
     ) -> Result<Self> {
         info!("Creating in-app client...");
-        let client = Client::with_ua(ua.as_str()).map_err(|e| {
+        let client = Client::new().map_err(|e| {
             warn!("Fail to create in-app client");
             e
         })?;
@@ -157,8 +129,8 @@ impl<'a> App<'a> {
             config,
             history,
             client,
-            ua,
             download_list: vec![],
+            ua: UA::default(),
         };
 
         Ok(ret)
@@ -223,7 +195,7 @@ impl<'a> App<'a> {
             // only takes out what we need to send
             .filter(|epi| epi.is_waiting())
         {
-            let jsonrpc = JsonRPCBuilder::new(&self.ua.inner)
+            let jsonrpc = JsonRPCBuilder::new(&self.ua.as_str())
                 .aria2_add_uri(None, &epi.torrent_link)
                 .build()
                 .map_err(|e| {
@@ -251,7 +223,7 @@ impl<'a> App<'a> {
         // sync download status
         info!("Syncing download status");
         for epi in self.download_list.iter_mut().filter(|epi| epi.is_sent()) {
-            let jsonrpc = JsonRPCBuilder::new(&self.ua.inner)
+            let jsonrpc = JsonRPCBuilder::new(&self.ua.as_str())
                 .aria2_tell_status(None, &epi.gid()?)
                 .build()
                 .map_err(|e| {

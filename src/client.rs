@@ -4,22 +4,46 @@ use anyhow::Result;
 
 use crate::jsonrpc::{JsonRPC, JsonRPCResponse};
 
+pub struct UA {
+    inner: String,
+}
+
+impl UA {
+    pub fn new(ua: &str) -> Self {
+        Self {
+            inner: ua.to_string(),
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.inner
+    }
+
+    pub fn into_string(self) -> String {
+        self.inner
+    }
+}
+
+impl Default for UA {
+    fn default() -> Self {
+        Self {
+            inner: concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")).to_string(),
+        }
+    }
+}
+
 pub struct Client {
     client: reqwest::blocking::Client,
 }
 
 impl Client {
     pub fn new() -> Result<Self> {
-        Self::with_ua(concat!(
-            env!("CARGO_PKG_NAME"),
-            "/",
-            env!("CARGO_PKG_VERSION")
-        ))
+        Self::with_ua(&UA::default())
     }
 
-    pub fn with_ua(ua: &str) -> Result<Self> {
+    pub fn with_ua(ua: &UA) -> Result<Self> {
         let client = reqwest::blocking::Client::builder()
-            .user_agent(ua)
+            .user_agent(ua.as_str())
             .build()?;
         Ok(Self { client })
     }
