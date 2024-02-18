@@ -1,10 +1,9 @@
 use anyhow::Result;
 
-mod config;
-mod history;
+pub mod config;
+pub mod history;
+pub mod episode;
 
-pub use config::Config;
-pub use history::History;
 use log::{debug, info, warn};
 
 pub trait SyncFile {

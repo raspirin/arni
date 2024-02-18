@@ -1,9 +1,9 @@
-use std::{path::Path, time::Duration};
+use std::{time::Duration};
 
 use anyhow::{Context, Result};
 use arni::{
     app::App,
-    config::{Config, History},
+    data::{config::Config, history::History},
 };
 use clap::Parser;
 use log::{error, info};
@@ -76,5 +76,5 @@ fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 }

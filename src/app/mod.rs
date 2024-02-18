@@ -6,8 +6,8 @@ use rss::Channel;
 
 use crate::{
     client::{Client, UA},
-    config::{Config, History, SyncFile},
-    data::Episode,
+    data::{config::Config, history::History, SyncFile},
+    data::episode::Episode,
     error::Error,
     jsonrpc::JsonRPCBuilder,
 };
@@ -103,7 +103,7 @@ impl<'a> App<'a> {
             // only takes out what we need to send
             .filter(|epi| epi.is_waiting())
         {
-            let jsonrpc = JsonRPCBuilder::new(&self.ua.as_str())
+            let jsonrpc = JsonRPCBuilder::new(self.ua.as_str())
                 .aria2_add_uri(None, &epi.torrent_link)
                 .build()
                 .map_err(|e| {
@@ -131,7 +131,7 @@ impl<'a> App<'a> {
         // sync download status
         info!("Syncing download status");
         for epi in self.download_list.iter_mut().filter(|epi| epi.is_sent()) {
-            let jsonrpc = JsonRPCBuilder::new(&self.ua.as_str())
+            let jsonrpc = JsonRPCBuilder::new(self.ua.as_str())
                 .aria2_tell_status(None, &epi.gid()?)
                 .build()
                 .map_err(|e| {
@@ -216,21 +216,21 @@ impl<'a> App<'a> {
             .build();
         let jsonrpc = match jsonrpc {
             Ok(jsonrpc) => jsonrpc,
-            Err(e) => {
+            Err(_e) => {
                 error!("Can't build jsonrpc");
                 return false;
             }
         };
         let response = self
             .client
-            .send(&self.config.aria2_address(), jsonrpc)
+            .send(self.config.aria2_address(), jsonrpc)
             .map_err(|e| {
                 error!("Can't get response from aria2.");
                 e
             });
         let response = match response {
             Ok(r) => r,
-            Err(e) => return false,
+            Err(_e) => return false,
         };
         let response = response.unwrap_response().unwrap();
         let version = response.get("version").unwrap();
