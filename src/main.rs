@@ -1,4 +1,4 @@
-use std::{time::Duration, path::Path};
+use std::{path::Path, time::Duration};
 
 use anyhow::{Context, Result};
 use arni::{
@@ -14,7 +14,7 @@ struct Cli {
     /// Run continously
     #[arg(short, long)]
     watch: bool,
-    
+
     /// Directory of config and history
     #[arg(short = 'd', long = "working_directory", value_name = "PATH")]
     working_dir: Option<String>,
