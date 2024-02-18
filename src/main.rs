@@ -1,4 +1,4 @@
-use std::{time::Duration};
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use arni::{
@@ -75,6 +75,4 @@ fn main() -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    
-}
+mod tests {}

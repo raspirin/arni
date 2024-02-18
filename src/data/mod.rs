@@ -1,8 +1,8 @@
 use anyhow::Result;
 
 pub mod config;
-pub mod history;
 pub mod episode;
+pub mod history;
 
 use log::{debug, info, warn};
 

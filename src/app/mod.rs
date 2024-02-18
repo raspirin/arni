@@ -6,8 +6,8 @@ use rss::Channel;
 
 use crate::{
     client::{Client, UA},
-    data::{config::Config, history::History, SyncFile},
     data::episode::Episode,
+    data::{config::Config, history::History, SyncFile},
     error::Error,
     jsonrpc::JsonRPCBuilder,
 };
